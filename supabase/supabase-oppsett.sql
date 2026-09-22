@@ -312,16 +312,37 @@ create or replace function public.norm_text(t text) returns text
 language sql stable set search_path = public, extensions as $$
   select trim(regexp_replace(lower(extensions.unaccent(coalesce(t, ''))), '[^a-z0-9]+', ' ', 'g'));
 $$;
-create or replace function public.search_games(q text, sys text default null, lim int default 20)
-returns table (system text, title text, region text, repo text, file text)
+-- Ekstra felter fra TheGamesDB (nyere spill, bilder og produktkoder)
+alter table public.games
+  add column if not exists image text, add column if not exists source text not null default 'libretro',
+  add column if not exists tgdb_id int, add column if not exists uids text[], add column if not exists uids_norm text,
+  add column if not exists year text;
+alter table public.games alter column repo drop not null, alter column file drop not null;
+create index if not exists games_uids_trgm on public.games using gin (uids_norm extensions.gin_trgm_ops);
+create unique index if not exists games_tgdb_id_uq on public.games (tgdb_id) where tgdb_id is not null;
+create or replace function public.html_unescape(t text) returns text language sql immutable as $$
+  select replace(replace(replace(replace(replace(replace(coalesce(t, ''), '&#039;', ''''), '&quot;', '"'), '&amp;', '&'), '&lt;', '<'), '&gt;', '>'), '&#39;', '''');
+$$;
+
+-- Søk på tittel eller produktkode (f.eks. SLES-53038)
+drop function if exists public.search_games(text, text, int);
+create function public.search_games(q text, sys text default null, lim int default 20)
+returns table (system text, title text, region text, repo text, file text, image text, year text, uids text[])
 language sql stable set search_path = public, extensions as $$
-  with w as (select public.norm_text(q) as nq)
-  select g.system, g.title, g.region, g.repo, g.file
+  with w as (select public.norm_text(q) as nq, regexp_replace(lower(q), '[^a-z0-9]', '', 'g') as code)
+  select g.system, g.title, g.region, g.repo, g.file, g.image, g.year, g.uids
   from public.games g, w
   where length(w.nq) >= 2 and (sys is null or g.system = sys)
-    and g.title_norm like all (array(select '%' || x || '%' from regexp_split_to_table(w.nq, ' ') x where x <> ''))
-  order by (g.title_norm like w.nq || '%') desc, extensions.similarity(g.title_norm, w.nq) desc,
-    case when g.region in ('Norway','Scandinavia','Sweden','Denmark','Finland','Europe','World','UK') then 0 else 1 end, length(g.title)
+    and (
+      g.title_norm like all (array(select '%' || x || '%' from regexp_split_to_table(w.nq, ' ') x where x <> ''))
+      or (length(w.code) >= 6 and w.code ~ '[a-z]' and w.code ~ '[0-9]' and g.uids_norm like '%' || w.code || '%')
+    )
+  order by
+    (length(w.code) >= 6 and coalesce(g.uids_norm, '') like '%' || w.code || '%') desc,
+    (g.title_norm = w.nq) desc, (g.source = 'libretro') desc, (g.title_norm like w.nq || '%') desc,
+    extensions.similarity(g.title_norm, w.nq) desc,
+    case when g.region in ('Norway','Scandinavia','Sweden','Denmark','Finland','Europe','World','UK') then 0 else 1 end,
+    (g.image is not null or g.file is not null) desc, length(g.title)
   limit least(greatest(lim, 1), 50);
 $$;
 grant execute on function public.search_games(text, text, int) to anon, authenticated;
@@ -334,6 +355,25 @@ grant execute on function public.norm_text(text) to anon, authenticated;
 -- insert into public.games (system, title, region, repo, file, title_norm)
 -- select x->>'s', x->>'t', x->>'r', x->>'p', x->>'f', public.norm_text(x->>'t')
 -- from jsonb_array_elements((select content::jsonb from extensions.http_get('https://raw.githubusercontent.com/b3cpot/kjopalt/main/data/games.json'))) x;
+
+-- ---------- Hemmeligheter (bare serverfunksjoner kan lese) ----------
+create table if not exists public.app_secrets (key text primary key, value text not null);
+alter table public.app_secrets enable row level security;
+revoke all on public.app_secrets from anon, authenticated;
+-- Legg inn nøkkelen for hånd (aldri i denne filen):
+-- insert into public.app_secrets values ('TGDB_KEY', 'din-nøkkel') on conflict (key) do update set value = excluded.value;
+
+-- ---------- Import fra TheGamesDB ----------
+-- Hentes fra den gratis databasefilen https://cdn.thegamesdb.net/json/database-latest.json (bruker ingen API-kvote).
+create table if not exists public.tgdb_platforms (id int primary key, system text not null);
+alter table public.tgdb_platforms enable row level security;
+insert into public.tgdb_platforms (id, system) values
+ (10,'PS1'),(11,'PS2'),(12,'PS3'),(4919,'PS4'),(4980,'PS5'),(13,'PSP'),(39,'PS Vita'),
+ (7,'NES'),(6,'SNES'),(3,'N64'),(2,'GameCube'),(9,'Wii'),(38,'Wii U'),(4971,'Switch'),(5021,'Switch 2'),
+ (4,'Game Boy'),(41,'GBC'),(5,'GBA'),(8,'DS'),(4912,'3DS'),(4918,'Virtual Boy'),
+ (14,'Xbox'),(15,'Xbox 360'),(4920,'Xbox One'),(4981,'Xbox Series'),
+ (35,'Master System'),(36,'Mega Drive'),(18,'Mega Drive'),(21,'Mega-CD'),(33,'32X'),(17,'Saturn'),(16,'Dreamcast'),(20,'Game Gear')
+on conflict (id) do update set system = excluded.system;
 
 -- =====================================================================
 -- GJØR DEG SELV TIL ADMIN

@@ -1404,7 +1404,8 @@ const Lookup = {
       // Egen katalog først. TheGamesDB (1000 oppslag/mnd) spørres bare når vi finner lite selv.
       const own = await API.sb.rpc("search_games", { q, sys: null, lim: 12 }).then(r => r.data || []).catch(() => []);
       const ext = own.length < 4 && LOOKUP_URL ? await this.call({ q }).then(d => d.items || []).catch(() => []) : [];
-      const mine = own.map(g => normExt({ name: g.title, platform: g.system, image: boxArt(g.repo, g.file), year: g.region, kind: "game" }));
+      const mine = own.map(g => normExt({ name: g.title, platform: g.system, image: g.image || (g.file ? boxArt(g.repo, g.file) : null),
+        year: [g.region === "Europe" ? "PAL" : g.region, g.year].filter(Boolean).join(" · "), kind: "game", uids: g.uids }));
       const out = [...mine, ...ext.map(normExt)], seen = new Set();
       return out.filter(x => { const k = (x.name + "|" + x.system).toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; });
     })());
@@ -1654,7 +1655,7 @@ V.sok = (p) => {
   return `<div class="wrap">
     <div class="page-h" style="padding-bottom:0"><h1>Hva vil du selge?</h1><p>Finn tingen din, eller legg den til selv. Du får et bud før du sender noe.</p></div>
     <div class="toolbar">
-      <div class="search-in">${icoSearch}<label for="q" class="sr">Søk</label><input id="q" class="input" type="search" autocomplete="off" placeholder="Tittel, merke eller konsoll" value="${esc(q)}" /><button class="clear" id="clr" type="button" aria-label="Tøm søket" ${q ? "" : "hidden"}>×</button></div>
+      <div class="search-in">${icoSearch}<label for="q" class="sr">Søk</label><input id="q" class="input" type="search" autocomplete="off" placeholder="Tittel, konsoll eller koden på disken" value="${esc(q)}" /><button class="clear" id="clr" type="button" aria-label="Tøm søket" ${q ? "" : "hidden"}>×</button></div>
       <div class="chips" role="group" aria-label="Kategori">${["Alle", ...CATS.filter(c => !["Samling", "Annet"].includes(c.name)).map(c => c.name)].map(c => `<button type="button" class="chip" data-cat="${c}" aria-pressed="${c === cat}">${c}</button>`).join("")}</div>
       <div class="filters2">
         <label class="sr" for="sys">Konsoll eller merke</label>
