@@ -280,6 +280,50 @@ begin
 end $$;
 revoke all on function public.check_rate_limit(text, int, int) from public, anon, authenticated;
 
+-- ---------- Spillkatalog (38 000+ spill med boksbilder) ----------
+-- Kilde: libretro-database + libretro-thumbnails på GitHub. Data: data/games.json i repoet.
+create extension if not exists pg_trgm with schema extensions;
+create extension if not exists unaccent with schema extensions;
+create table if not exists public.games (
+  id bigint generated always as identity primary key,
+  system text not null, title text not null, region text,
+  repo text not null, file text not null, title_norm text not null
+);
+create index if not exists games_title_trgm on public.games using gin (title_norm extensions.gin_trgm_ops);
+create index if not exists games_system_idx on public.games (system);
+alter table public.games enable row level security;
+drop policy if exists "games read" on public.games;
+create policy "games read" on public.games for select using (true);
+drop policy if exists "games admin write" on public.games;
+create policy "games admin write" on public.games for all using (public.is_admin()) with check (public.is_admin());
+
+create or replace function public.norm_text(t text) returns text
+language sql stable set search_path = public, extensions as $$
+  select trim(regexp_replace(lower(extensions.unaccent(coalesce(t, ''))), '[^a-z0-9]+', ' ', 'g'));
+$$;
+create or replace function public.search_games(q text, sys text default null, lim int default 20)
+returns table (system text, title text, region text, repo text, file text)
+language sql stable set search_path = public, extensions as $$
+  with w as (select public.norm_text(q) as nq)
+  select g.system, g.title, g.region, g.repo, g.file
+  from public.games g, w
+  where length(w.nq) >= 2 and (sys is null or g.system = sys)
+    and g.title_norm like all (array(select '%' || x || '%' from regexp_split_to_table(w.nq, ' ') x where x <> ''))
+  order by (g.title_norm like w.nq || '%') desc, extensions.similarity(g.title_norm, w.nq) desc,
+    case when g.region in ('Norway','Scandinavia','Sweden','Denmark','Finland','Europe','World','UK') then 0 else 1 end, length(g.title)
+  limit least(greatest(lim, 1), 50);
+$$;
+grant execute on function public.search_games(text, text, int) to anon, authenticated;
+grant execute on function public.norm_text(text) to anon, authenticated;
+
+-- Last inn katalogen (databasen henter filen selv fra GitHub; repoet må være offentlig mens dette kjøres):
+-- create extension if not exists http with schema extensions;
+-- set http.timeout_msec = 60000;
+-- truncate public.games;
+-- insert into public.games (system, title, region, repo, file, title_norm)
+-- select x->>'s', x->>'t', x->>'r', x->>'p', x->>'f', public.norm_text(x->>'t')
+-- from jsonb_array_elements((select content::jsonb from extensions.http_get('https://raw.githubusercontent.com/b3cpot/kjopalt/main/data/games.json'))) x;
+
 -- =====================================================================
 -- GJØR DEG SELV TIL ADMIN
 -- 1. Registrer deg på nettsiden med din egen e-post.

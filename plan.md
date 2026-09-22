@@ -53,6 +53,21 @@ Testen jeg allerede har kjørt dekker databasereglene (hvem kan lese/skrive hva)
 - [ ] Bestem hvilken av GitHub Pages (`b3cpot.github.io/kjopalt`) og Vercel (`kjopalt.vercel.app`) som er den "ekte" adressen kundene skal bruke — de er identiske nå, så velg ut fra smak. Vercel er enklere å koble et eget domene til senere.
 - [ ] Om dere vil ha et eget domene pekende på Vercel: sett det opp når domenet er kjøpt (navn ikke landet ennå — se punkt 6).
 
+## 3b. Gjort 22. september (kveld)
+
+- [x] **Du er eneste admin** (`altkjop@gmail.com`). Bekreftet i databasen.
+- [x] **Hele løpet testet på ekte**: din egen forespørsel RB100001 er kjørt helt til «utbetalt» på den live siden.
+- [x] **Spilldatabase med bilder**: 38 737 spill for 22 konsoller (NES til PS3/Xbox 360) med europeiske boksbilder, hentet fra libretro-prosjektet på GitHub og lagt i vår egen database. Søket tåler skrivefeil og aksenter, og viser europeiske utgaver først. Ingen API-nøkkel trengs.
+- [x] **Konsoller og kontrollere**: ca. 140 ting (alle vanlige konsoller og modellvarianter, og kontrollere som egne ting: DualShock 1–4, DualSense, Xbox-kontrollere, N64, GameCube, Wii Remote, Joy-Con osv.). Alle 133 bildeadressene er sjekket at de laster.
+- [x] **Hvit bakgrunn bak alle produktbilder.**
+- [x] **«Legg i sending» sender deg ikke lenger til kassen.** Du blir der du var og kan søke videre. Et «Din sending»-panel (nede til høyre på PC, stripe over menyen på mobil) viser hva du har lagt til, med knappen **«Jeg er ferdig»**.
+- [x] **Sendingskode i stedet for adresselapp**: kunden ser aldri adressen din, bare koden du limer inn i Admin.
+- [x] **E-postbekreftelse** sender folk tilbake til siden med en norsk melding.
+- [x] **Testordre RB100002** («TEST Ola Nordmann») ligger klar i Admin med bilder, til å prøve prissetting på. Testkunden kan logge inn: `testkunde@kjopalt.no` / `Testkunde123`.
+- [ ] **Du må gjøre:** Supabase → Authentication → URL Configuration: Site URL `https://kjopalt.vercel.app`, og Redirect URLs `https://kjopalt.vercel.app/**` og `https://b3cpot.github.io/kjopalt/**`.
+- [ ] **Før lansering:** slett testkunden og RB100002 (si ifra, så gjør jeg det).
+- [ ] **Nyere spill (PS4/PS5/Switch/Xbox One+)** finnes ikke i libretro-databasen. De dekkes når TheGamesDB- eller RAWG-nøkkelen er på plass. Inntil da kan kunden skrive navnet selv.
+
 ## 4. Nettverkstilgang jeg trenger fra deg
 
 Sandkassen min er blokkert fra to adresser jeg trenger for å teste selv, i stedet for at du må gjøre alt manuelt:
