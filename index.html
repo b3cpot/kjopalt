@@ -666,6 +666,12 @@ main:focus { outline: none; }
 .scan-hit { display: flex; gap: 14px; align-items: center; background: var(--paper); border-radius: 14px; padding: 12px; }
 .scan-hit .pi { width: 72px; height: 88px; font-size: 32px; }
 .scan-hit b { font-size: 17px; line-height: 1.25; display: block; }
+.shipcode { border: 2px dashed var(--ink); border-radius: 14px; padding: 18px; text-align: center; display: grid; gap: 6px; background: var(--paper); }
+.shipcode small { color: var(--muted); font-weight: 700; font-size: 13px; }
+.shipcode b { font-family: var(--display); font-size: clamp(22px, 6vw, 32px); letter-spacing: .04em; word-break: break-all; }
+.shipcode p { color: var(--muted); font-size: 14.5px; max-width: 44ch; margin: 0 auto; }
+.shipcode.waiting { border-color: var(--line); }
+.shipcode.waiting b { font-size: 22px; letter-spacing: 0; }
 [hidden] { display: none !important; }
 </style>
 </head>
@@ -739,7 +745,8 @@ const CONFIG = {
   // Offentlig nøkkel: den skal stå i nettsiden. Sikkerheten ligger i databasereglene.
   supabaseAnonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJjaWhxdm9icXpnZnlibGVrd2dwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAwNzk2OTAsImV4cCI6MjEwNTY1NTY5MH0.fu8y2rOYcQGdEPyxEd1dyZ0ZumgGaO8U1-QS6N6ocls",
   demoAdminEmail: "admin@raskbud.no",
-  receiver: ["Kjøpalt", "Atomveien 20K", "1777 Halden"],
+  // Mottaksadresse (vises IKKE for kunder; de får bare en sendingskode fra Posten/PostNord)
+  receiver: ["Kjøpalt", "Atomveien 20K", "1777 Halden", "Tlf 47295503"],
   lookupUrl: ""             // tomt = bruker Supabase-funksjonen "lookup" automatisk
 };
 const LIVE = !!(CONFIG.supabaseUrl && CONFIG.supabaseAnonKey);
@@ -1015,7 +1022,7 @@ const LocalAPI = {
 /* =============================== Backend: Supabase (live) =============================== */
 function fromRow(r) {
   return { ref: r.ref, userId: r.user_id, email: r.email, name: r.name, status: r.status, items: r.items || [], ship: r.ship || {}, payout: r.payout || {},
-    total: Number(r.total || 0), paidAmount: r.paid_amount == null ? null : Number(r.paid_amount), createdAt: Date.parse(r.created_at), updatedAt: Date.parse(r.updated_at),
+    total: Number(r.total || 0), shipCode: r.ship_code || "", paidAmount: r.paid_amount == null ? null : Number(r.paid_amount), createdAt: Date.parse(r.created_at), updatedAt: Date.parse(r.updated_at),
     messages: (r.messages || []).map(m => ({ ...m, at: typeof m.at === "string" ? Date.parse(m.at) : m.at })) };
 }
 function niceErr(e) {
@@ -1040,7 +1047,7 @@ const SupaAPI = {
     return { id: session.user.id, email: session.user.email, name: p?.name || session.user.email.split("@")[0], isAdmin: !!p?.is_admin, profile: p || {} };
   },
   async signUp(email, pass, name) {
-    const { data, error } = await this.sb.auth.signUp({ email, password: pass, options: { data: { name } } });
+    const { data, error } = await this.sb.auth.signUp({ email, password: pass, options: { data: { name }, emailRedirectTo: location.origin + location.pathname + "#/konto" } });
     if (error) throw new Error(niceErr(error));
     if (!data.session) throw new Error("Vi har sendt deg en e-post. Klikk på lenken for å bekrefte kontoen, og logg deretter inn.");
   },
@@ -1079,6 +1086,7 @@ const SupaAPI = {
     if ("items" in patch) row.items = patch.items;
     if ("total" in patch) row.total = patch.total;
     if ("paidAmount" in patch) row.paid_amount = patch.paidAmount;
+    if ("shipCode" in patch) row.ship_code = patch.shipCode;
     if ("messages" in patch) row.messages = patch.messages.map(m => ({ ...m, at: new Date(m.at).toISOString() }));
     const { error } = await this.sb.from("submissions").update(row).eq("ref", ref); if (error) throw new Error(error.message);
   },
@@ -1888,13 +1896,11 @@ function bindMessages(s) {
     catch (ex) { toast(ex.message); btn.disabled = false; btn.textContent = "Send melding"; }
   });
 }
-function shippingLabel(s) {
-  let h = 7, bars = "";
-  for (let k = 0; k < 46; k++) { h = (h * 131 + s.ref.charCodeAt(k % s.ref.length) + k) % 9973; bars += `<i style="width:${1 + (h % 4)}px;margin-right:${1 + ((h >> 3) % 3)}px"></i>`; }
-  return `<div class="label" aria-label="Adresselapp">
-    <div class="lh">RaskBud<span>Forhåndsbetalt</span></div>
-    <div class="cols"><div><div class="k">Fra</div>${esc(s.ship.name)}<br>${esc(s.ship.addr)}<br>${esc(s.ship.zip)} ${esc(s.ship.city)}</div><div><div class="k">Til</div>${CONFIG.receiver.map(esc).join("<br>")}</div></div>
-    <div class="bars" aria-hidden="true">${bars}</div><div class="code">${s.ref}</div></div>`;
+function shipBox(s) {
+  if (s.shipCode) return `<div class="shipcode"><small>Din sendingskode</small><b class="num">${esc(s.shipCode)}</b>
+    <p>Skriv koden tydelig på esken, eller vis den i skranken hos Posten eller PostNord. Frakten er betalt.</p></div>`;
+  return `<div class="shipcode waiting"><small>Sendingskode</small><b>Kommer snart</b>
+    <p>Vi sender deg en sendingskode fra Posten eller PostNord, vanligvis innen én virkedag. Den dukker opp her, og du får den på e-post.</p></div>`;
 }
 V.ordre = async (p, ref) => {
   if (!ME) return loginNeeded("Forespørsel", `#/ordre/${ref}`);
@@ -1917,8 +1923,8 @@ V.ordre = async (p, ref) => {
     main = `<div class="panel"><h2 style="font-size:22px;margin-bottom:6px">Slik sender du</h2>
       <ol class="checklist" style="margin:14px 0 18px"><li><div><b>Pakk godt</b><span>Bruk en solid eske og fyll tomrommet, så ingenting rister.</span></div></li>
       <li><div><b>Legg ved referansen</b><span>Skriv ${s.ref} på en lapp i pakken.</span></div></li>
-      <li><div><b>Lever pakken</b><span>Vi sender deg fraktetiketten på e-post innen én virkedag. Lever pakken på et Posten-punkt.</span></div></li></ol>
-      ${shippingLabel(s)}</div>
+      <li><div><b>Lever pakken</b><span>Skriv sendingskoden på esken og lever pakken hos Posten eller PostNord.</span></div></li></ol>
+      ${shipBox(s)}</div>
       <div class="panel" style="margin-top:16px"><h3>Dette skal i pakken</h3>${itemRows({ ...s, items: s.items.filter(included) }, { showPrice: true })}
       <div class="offer-tot" style="margin-bottom:0"><span>Du får</span><b class="num">${kr(s.total)}</b></div></div>`;
   } else {
@@ -2044,7 +2050,10 @@ async function adminDetail(ref) {
           ${{
             venter_bud: `<p class="muted small">Se på bildene, sett pris på hver ting og send budet. Trenger du flere bilder, skriv til kunden under Meldinger.</p>`,
             bud_sendt: `<p class="muted small">Venter på at kunden godtar eller avslår. Du kan fortsatt endre budet.</p>`,
-            godtatt: `<p class="muted small" style="margin-bottom:12px">Kunden har godtatt ${kr(s.total)}. Send fraktetikett til ${esc(s.email)}, og merk pakken som mottatt når den kommer.</p><button class="btn full" data-act="mottatt">Merk som mottatt</button>`,
+            godtatt: `<p class="muted small" style="margin-bottom:12px">Kunden har godtatt ${kr(s.total)}. Lag en fraktlapp hos Posten eller PostNord og lim inn sendingskoden her, så ser kunden den.</p>
+              <label class="field"><span class="small">Sendingskode</span><input class="input num" id="shipcode" value="${esc(s.shipCode || "")}" placeholder="F.eks. 70701234567890123" autocomplete="off" /></label>
+              <button class="btn ghost full" data-act="shipcode" style="margin-bottom:10px">${s.shipCode ? "Oppdater sendingskoden" : "Lagre og vis for kunden"}</button>
+              <button class="btn full" data-act="mottatt">Merk som mottatt</button>`,
             mottatt: `<p class="muted small" style="margin-bottom:12px">Sjekk pakken. Stemmer alt, betal ut. Stemmer noe ikke, send et justert bud i skjemaet.</p>
               <label class="field"><span class="small">Beløp betalt (kr)</span><input class="input num" type="number" min="0" step="1" id="paid" value="${Math.round(s.total)}" /></label><button class="btn full" data-act="utbetalt">Merk som utbetalt</button>`,
             utbetalt: `<p class="muted small">Utbetalt ${kr(s.paidAmount ?? s.total)}. Ferdig.</p>`,
@@ -2102,6 +2111,12 @@ function adminDetailMount() {
     const act = b.dataset.act;
     try {
       if (act === "slett") { if (!confirm(`Slette ${s.ref} for godt?`)) return; await API.deleteSubmission(s.ref); toast("Slettet"); go("#/admin"); return; }
+      if (act === "shipcode") {
+        const code = document.getElementById("shipcode").value.trim();
+        if (!code) { toast("Lim inn sendingskoden først."); return; }
+        await API.adminUpdate(s.ref, { shipCode: code, messages: [...s.messages, sysMsg(`Sendingskode lagt inn: ${code}`)] });
+        toast("Sendingskoden vises nå for kunden"); render(); return;
+      }
       if (act === "kansellert" && !confirm("Kansellere forespørselen? Kunden ser at den er kansellert.")) return;
       const patch = { status: act };
       const msg = { mottatt: "Pakken er mottatt og sjekkes.", utbetalt: "", kansellert: "Forespørselen er kansellert." }[act];
@@ -2219,9 +2234,20 @@ window.addEventListener("storage", e => { if (e.key === K.draft) { DRAFT = load(
 
 (async function boot() {
   syncBag();
+  // Kommer vi tilbake fra en bekreftelseslenke? Supabase legger da innlogging eller feil i adressen.
+  const authHash = /(^|[#&?])(access_token|error_description|error)=/.test(location.hash) ? new URLSearchParams(location.hash.replace(/^#\/?/, "").replace(/^[^?]*\?/, "")) : null;
+  const authQuery = new URLSearchParams(location.search);
   try { await API.init(); } catch (ex) { console.error(ex); toast("Kunne ikke koble til serveren. Prøv å laste siden på nytt."); }
   try { const s = await API.getSettings(); if (s) Object.assign(RATES, s); } catch {}
+  if (LIVE && authQuery.get("code")) { try { await API.sb.auth.exchangeCodeForSession(authQuery.get("code")); } catch (ex) { console.error(ex); } }
   await refreshMe();
+  if (authHash || authQuery.get("code") || authQuery.get("error")) {
+    const err = authHash?.get("error_description") || authQuery.get("error_description");
+    history.replaceState(null, "", location.pathname + "#/konto");
+    if (err) toast(/expired/i.test(err) ? "Lenken har gått ut. Logg inn, eller registrer deg på nytt for å få en ny." : "Kunne ikke bekrefte e-posten: " + err);
+    else if (ME) toast("E-posten er bekreftet. Velkommen!");
+    else toast("E-posten er bekreftet. Logg inn for å fortsette.");
+  }
   render();
 })();
 </script>
