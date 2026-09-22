@@ -1,0 +1,2229 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#F2F4F7" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#0E1424" media="(prefers-color-scheme: dark)" />
+<title>RaskBud – selg spill, konsoller og kort</title>
+<meta name="description" content="Søk opp tingen din, se hva vi betaler, og send gratis. Utbetaling på Vipps eller konto." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --paper: #F2F4F7;
+  --surface: #FFFFFF;
+  --surface-2: #E8ECF2;
+  --ink: #131A2E;
+  --muted: #5B6479;
+  --line: #DCE1E9;
+  --cobalt: #2B46E8;
+  --cobalt-hover: #1F37C4;
+  --on-cobalt: #FFFFFF;
+  --sticker: #FFD23F;
+  --on-sticker: #1C1600;
+  --hot: #D9481F;
+  --ok: #0F7F55;
+  --ok-bg: #E2F5EC;
+  --danger: #C8293A;
+  --t-spill: #DDE3FF; --t-konsoll: #E6DCFF; --t-kort: #FFE3D6; --t-elek: #D8F0F4; --t-samle: #FFF1C7; --t-tilbeh: #E0F2DE;
+  --display: "Bricolage Grotesque", "Arial Black", "Helvetica Neue", Arial, sans-serif;
+  --body: "Instrument Sans", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --r-sm: 8px; --r-md: 14px; --r-lg: 22px;
+  --wrap: 1180px;
+  --tabbar: 0px;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0E1424; --surface: #161E33; --surface-2: #1E2842; --ink: #ECEFF6; --muted: #9AA4BB; --line: #28324C;
+    --cobalt: #6F84FF; --cobalt-hover: #8C9CFF; --on-cobalt: #0B1024;
+    --hot: #FF7A52; --ok: #4CD69A; --ok-bg: #12352A; --danger: #FF6F7F;
+    --t-spill: #232E5A; --t-konsoll: #2F2555; --t-kort: #4A2A22; --t-elek: #173E47; --t-samle: #44391A; --t-tilbeh: #1F3C24;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0E1424; --surface: #161E33; --surface-2: #1E2842; --ink: #ECEFF6; --muted: #9AA4BB; --line: #28324C;
+  --cobalt: #6F84FF; --cobalt-hover: #8C9CFF; --on-cobalt: #0B1024;
+  --hot: #FF7A52; --ok: #4CD69A; --ok-bg: #12352A; --danger: #FF6F7F;
+  --t-spill: #232E5A; --t-konsoll: #2F2555; --t-kort: #4A2A22; --t-elek: #173E47; --t-samle: #44391A; --t-tilbeh: #1F3C24;
+}
+html { scroll-padding-top: calc(env(safe-area-inset-top, 0px) + 80px); -webkit-text-size-adjust: 100%; }
+*, *::before, *::after { box-sizing: border-box; }
+* { margin: 0; padding: 0; }
+body {
+  background: var(--paper); color: var(--ink);
+  font-family: var(--body); font-size: 16px; line-height: 1.55;
+  min-height: 100%;
+  padding-bottom: var(--tabbar);
+  -webkit-font-smoothing: antialiased;
+}
+img, svg { max-width: 100%; display: block; }
+a { color: inherit; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+input, select, textarea { font-size: 16px; }
+:focus-visible { outline: 3px solid var(--cobalt); outline-offset: 2px; border-radius: 6px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.wrap { width: min(var(--wrap), calc(100% - 32px)); margin-inline: auto; }
+.num { font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+/* ---------- Header ---------- */
+.top {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 30;
+  background: color-mix(in srgb, var(--paper) 88%, transparent);
+  backdrop-filter: saturate(1.4) blur(14px); -webkit-backdrop-filter: saturate(1.4) blur(14px);
+  border-bottom: 1px solid var(--line);
+}
+.top-in { height: 64px; display: flex; align-items: center; gap: 20px; }
+.logo { display: flex; align-items: center; gap: 10px; text-decoration: none; font-family: var(--display); font-weight: 800; font-size: 22px; letter-spacing: -0.03em; }
+.logo-tag {
+  position: relative; width: 34px; height: 26px; background: var(--sticker); color: var(--on-sticker);
+  border-radius: 4px 8px 8px 4px; transform: rotate(-8deg);
+  display: grid; place-items: center; font-size: 15px; font-weight: 800; padding-left: 5px;
+}
+.logo-tag::before { content: ""; position: absolute; left: 5px; top: 50%; width: 5px; height: 5px; margin-top: -2.5px; border-radius: 50%; background: var(--paper); }
+.nav { display: flex; gap: 2px; margin-left: 12px; }
+.nav a { text-decoration: none; padding: 8px 12px; border-radius: 10px; font-weight: 500; color: var(--muted); font-size: 15px; }
+.nav a:hover { color: var(--ink); background: var(--surface-2); }
+.nav a[aria-current="page"] { color: var(--ink); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); }
+.top-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.acct-link { text-decoration: none; font-weight: 600; font-size: 15px; padding: 8px 12px; border-radius: 10px; }
+.acct-link:hover { background: var(--surface-2); }
+.bag {
+  display: inline-flex; align-items: center; gap: 10px; text-decoration: none;
+  background: var(--ink); color: var(--paper); border-radius: 999px; padding: 6px 6px 6px 14px; font-weight: 600; font-size: 15px;
+}
+.bag .count { background: var(--sticker); color: var(--on-sticker); border-radius: 999px; min-width: 28px; height: 28px; padding: 0 8px; display: grid; place-items: center; font-weight: 700; }
+.bag.bump .count { animation: bump .45s ease; }
+@keyframes bump { 40% { transform: scale(1.3) rotate(-8deg); } }
+
+/* ---------- Tab bar (mobile) ---------- */
+.tabbar { display: none; }
+@media (max-width: 860px) {
+  :root { --tabbar: calc(64px + env(safe-area-inset-bottom, 0px)); }
+  .nav, .acct-link { display: none; }
+  .bag { padding: 5px 5px 5px 12px; font-size: 14px; }
+  .tabbar {
+    display: grid; grid-template-columns: repeat(5, 1fr);
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 35;
+    background: var(--surface); border-top: 1px solid var(--line);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .tabbar a { height: 64px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; text-decoration: none; color: var(--muted); font-size: 11.5px; font-weight: 600; position: relative; }
+  .tabbar a svg { width: 24px; height: 24px; }
+  .tabbar a[aria-current="page"] { color: var(--cobalt); }
+  .tabbar .dot { position: absolute; top: 8px; left: calc(50% + 6px); background: var(--sticker); color: var(--on-sticker); font-size: 11px; min-width: 18px; height: 18px; border-radius: 9px; display: grid; place-items: center; padding: 0 5px; font-weight: 700; }
+  .tabbar .dot[hidden] { display: none; }
+}
+
+/* ---------- Buttons, fields ---------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 48px; padding: 0 20px; border-radius: 12px; border: 0;
+  background: var(--cobalt); color: var(--on-cobalt); font-weight: 700; font-size: 16px; text-decoration: none;
+  transition: background .15s, transform .1s;
+}
+.btn:hover { background: var(--cobalt-hover); }
+.btn:active { transform: translateY(1px); }
+.btn.ghost { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--line); }
+.btn.ghost:hover { background: var(--surface-2); }
+.btn.ink { background: var(--ink); color: var(--paper); }
+.btn.small { min-height: 40px; padding: 0 14px; font-size: 14.5px; border-radius: 10px; }
+.btn.full { width: 100%; }
+.btn[disabled] { opacity: .5; pointer-events: none; }
+.linkbtn { background: none; border: 0; color: var(--cobalt); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; padding: 4px 0; }
+.field { display: grid; gap: 6px; margin-bottom: 14px; }
+.field > span { font-weight: 600; font-size: 14.5px; }
+.field small { color: var(--muted); font-size: 13.5px; }
+.input, .select, .textarea {
+  width: 100%; min-height: 48px; padding: 11px 14px; border-radius: 12px;
+  background: var(--surface); border: 1.5px solid var(--line); color: var(--ink);
+}
+.textarea { min-height: 120px; resize: vertical; }
+.input:focus, .select:focus, .textarea:focus { outline: none; border-color: var(--cobalt); box-shadow: 0 0 0 3px color-mix(in srgb, var(--cobalt) 22%, transparent); }
+.select { appearance: none; -webkit-appearance: none; padding-right: 40px; background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%); background-position: calc(100% - 20px) 50%, calc(100% - 14px) 50%; background-size: 6px 6px; background-repeat: no-repeat; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.row-zip { display: grid; grid-template-columns: 120px 1fr; gap: 12px; }
+@media (max-width: 480px) { .row2 { grid-template-columns: 1fr; } }
+.check { display: flex; gap: 10px; align-items: flex-start; font-size: 14.5px; margin: 6px 0 16px; }
+.check input { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--cobalt); flex: none; }
+
+/* ---------- Sticker (the price tag) ---------- */
+.sticker {
+  --rot: -5deg;
+  position: relative; display: inline-flex; flex-direction: column; justify-content: center;
+  background: var(--sticker); color: var(--on-sticker);
+  border-radius: 6px 12px 12px 6px; padding: 6px 12px 6px 22px;
+  transform: rotate(var(--rot)); box-shadow: 0 2px 0 rgba(0,0,0,.18), 0 8px 20px -10px rgba(0,0,0,.35);
+  font-family: var(--display); font-weight: 800; line-height: 1.05; letter-spacing: -0.02em; white-space: nowrap;
+}
+.sticker::before { content: ""; position: absolute; left: 8px; top: 50%; width: 7px; height: 7px; margin-top: -3.5px; border-radius: 50%; background: var(--surface); box-shadow: inset 0 1px 2px rgba(0,0,0,.35); }
+.sticker small { font-family: var(--body); font-weight: 600; font-size: 11.5px; letter-spacing: 0; opacity: .8; }
+.sticker .amt { font-size: 20px; }
+.sticker.xl { padding: 18px 30px 18px 52px; border-radius: 12px 26px 26px 12px; --rot: -4deg; }
+.sticker.xl::before { left: 20px; width: 16px; height: 16px; margin-top: -8px; }
+.sticker.xl small { font-size: 15px; }
+.sticker.xl .amt { font-size: clamp(44px, 7vw, 76px); }
+.sticker.pop { animation: pop .35s ease; }
+@keyframes pop { 0% { transform: rotate(var(--rot)) scale(.94); } 60% { transform: rotate(calc(var(--rot) - 2deg)) scale(1.04); } 100% { transform: rotate(var(--rot)) scale(1); } }
+
+/* ---------- Hero ---------- */
+.hero { padding: 48px 0 40px; }
+.hero-in { display: grid; grid-template-columns: 1.1fr .9fr; gap: 48px; align-items: center; }
+.hero h1 { font-family: var(--display); font-weight: 800; font-size: clamp(38px, 6vw, 68px); line-height: .98; letter-spacing: -0.035em; max-width: 13ch; }
+.hero p.lead { margin-top: 18px; font-size: 18px; color: var(--muted); max-width: 46ch; }
+.quote { margin-top: 26px; position: relative; max-width: 560px; }
+.quote .input { min-height: 60px; font-size: 18px; padding-left: 52px; border-radius: 16px; border-width: 2px; }
+.quote .ico { position: absolute; left: 18px; top: 18px; width: 24px; height: 24px; color: var(--muted); pointer-events: none; }
+.suggest { margin-top: 8px; display: grid; gap: 6px; }
+.suggest button {
+  display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
+  background: var(--surface); border: 1.5px solid var(--line); border-radius: 12px; padding: 8px 12px; min-height: 52px;
+}
+.suggest button:hover, .suggest button.on { border-color: var(--cobalt); }
+.suggest .em { font-size: 22px; width: 32px; text-align: center; }
+.suggest .nm { flex: 1; font-weight: 600; font-size: 15px; }
+.suggest .pr { font-weight: 700; font-family: var(--display); }
+.hero-card {
+  background: var(--surface); border-radius: var(--r-lg); padding: 28px; border: 1px solid var(--line);
+  min-height: 380px; display: flex; flex-direction: column; justify-content: space-between; gap: 20px; position: relative; overflow: hidden;
+}
+.hero-card .obj { font-size: 88px; line-height: 1; }
+.hero-card .name { font-family: var(--display); font-weight: 700; font-size: 24px; letter-spacing: -0.02em; line-height: 1.15; }
+.hero-card .sys { color: var(--muted); font-size: 15px; margin-top: 4px; }
+.hero-card .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.hero-card .stick-wrap { align-self: flex-start; margin: 4px 0 6px; }
+.facts { display: flex; flex-wrap: wrap; gap: 0; margin-top: 28px; border-top: 1px solid var(--line); }
+.facts div { padding: 14px 22px 0 0; margin-right: 22px; }
+.facts div + div { border-left: 1px solid var(--line); padding-left: 22px; }
+.facts b { display: block; font-family: var(--display); font-size: 22px; letter-spacing: -0.02em; }
+.facts span { color: var(--muted); font-size: 14px; }
+@media (max-width: 860px) {
+  .hero { padding: 24px 0 28px; }
+  .hero-in { grid-template-columns: 1fr; gap: 24px; }
+  .hero-card { min-height: 0; padding: 22px; }
+  .hero-card .obj { font-size: 60px; }
+  .facts div { padding-right: 14px; margin-right: 14px; }
+  .facts div + div { padding-left: 14px; }
+  .facts b { font-size: 18px; }
+}
+@media (max-width: 420px) { .facts div:nth-child(3) { display: none; } }
+
+/* ---------- Sections ---------- */
+.sec { padding: 40px 0; }
+.sec-h { display: flex; align-items: end; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+h2, .h2 { font-family: var(--display); font-weight: 800; font-size: clamp(26px, 3.4vw, 36px); letter-spacing: -0.03em; line-height: 1.05; }
+h3 { font-family: var(--display); font-weight: 700; font-size: 20px; letter-spacing: -0.015em; line-height: 1.2; }
+.sec-h a { font-weight: 600; color: var(--cobalt); text-decoration: none; white-space: nowrap; }
+.sec-h a:hover { text-decoration: underline; }
+.muted { color: var(--muted); }
+.page-h { padding: 28px 0 10px; }
+.page-h h1 { font-family: var(--display); font-weight: 800; font-size: clamp(32px, 5vw, 50px); letter-spacing: -0.035em; line-height: 1; }
+.page-h p { color: var(--muted); margin-top: 10px; max-width: 60ch; font-size: 17px; }
+.back { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); text-decoration: none; font-weight: 600; font-size: 14.5px; margin-bottom: 12px; }
+.back:hover { color: var(--ink); }
+
+/* ---------- Item grid ---------- */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 16px; }
+@media (max-width: 520px) { .grid { grid-template-columns: 1fr 1fr; gap: 12px; } }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); display: flex; flex-direction: column; overflow: hidden; }
+.card-link { text-decoration: none; display: block; position: relative; }
+.thumb { aspect-ratio: 4 / 3; display: grid; place-items: center; font-size: 56px; position: relative; }
+.card .thumb { border-bottom: 1px solid var(--line); }
+.card .sticker { position: absolute; right: 10px; bottom: -14px; }
+.card .hotflag { position: absolute; left: 10px; top: 10px; background: var(--surface); color: var(--hot); font-weight: 700; font-size: 12.5px; padding: 3px 9px; border-radius: 999px; }
+.card-b { padding: 20px 14px 14px; display: flex; flex-direction: column; gap: 4px; flex: 1; }
+.card-b .t { font-weight: 600; font-size: 15.5px; line-height: 1.3; }
+.card-b .s { color: var(--muted); font-size: 13.5px; }
+.card-b .btn { margin-top: auto; }
+.card-b .spacer { flex: 1; min-height: 10px; }
+.card-link:hover .t { text-decoration: underline; text-underline-offset: 3px; }
+@media (max-width: 520px) {
+  .thumb { font-size: 44px; }
+  .card .sticker .amt { font-size: 17px; }
+  .card-b { padding: 18px 10px 10px; }
+  .card-b .t { font-size: 14.5px; }
+}
+.t-Spill { background: var(--t-spill); } .t-Konsoll { background: var(--t-konsoll); } .t-Kort { background: var(--t-kort); }
+.t-Elektronikk { background: var(--t-elek); } .t-Samleobjekt { background: var(--t-samle); } .t-Tilbehør { background: var(--t-tilbeh); }
+
+/* ---------- Categories ---------- */
+.cats { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
+.cat { text-decoration: none; border-radius: var(--r-md); padding: 16px; display: flex; flex-direction: column; gap: 18px; min-height: 130px; border: 1px solid transparent; }
+.cat:hover { border-color: var(--ink); }
+.cat .e { font-size: 34px; }
+.cat b { font-family: var(--display); font-size: 19px; letter-spacing: -0.02em; display: block; }
+.cat span { font-size: 13.5px; color: var(--muted); }
+@media (max-width: 960px) { .cats { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 520px) { .cats { grid-template-columns: repeat(2, 1fr); } .cat { min-height: 110px; } }
+
+/* ---------- Steps ---------- */
+.steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; counter-reset: s; }
+.step { padding: 26px; counter-increment: s; position: relative; }
+.step + .step { border-left: 1px dashed var(--line); }
+.step::before { content: counter(s); font-family: var(--display); font-weight: 800; font-size: 54px; line-height: 1; color: var(--cobalt); display: block; margin-bottom: 14px; }
+.step p { color: var(--muted); margin-top: 6px; font-size: 15px; }
+@media (max-width: 760px) { .steps { grid-template-columns: 1fr; } .step + .step { border-left: 0; border-top: 1px dashed var(--line); } .step { display: grid; grid-template-columns: 52px 1fr; gap: 0 12px; padding: 20px; } .step::before { grid-row: span 2; font-size: 40px; margin: 0; } }
+
+/* ---------- Promo pair ---------- */
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.promo { border-radius: var(--r-lg); padding: 28px; display: flex; flex-direction: column; gap: 10px; align-items: flex-start; min-height: 230px; }
+.promo.a { background: var(--ink); color: var(--paper); }
+.promo.a p { color: color-mix(in srgb, var(--paper) 72%, transparent); }
+.promo.a .btn { background: var(--sticker); color: var(--on-sticker); }
+.promo.b { background: var(--surface); border: 1px solid var(--line); }
+.promo p { max-width: 42ch; margin-bottom: 8px; }
+.promo .btn { margin-top: auto; }
+@media (max-width: 760px) { .pair { grid-template-columns: 1fr; } .promo { min-height: 0; padding: 22px; } }
+
+/* ---------- Search page ---------- */
+.toolbar { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 64px); z-index: 10; background: var(--paper); padding: 12px 0; }
+.search-in { position: relative; }
+.search-in .input { padding-left: 46px; min-height: 52px; border-radius: 14px; }
+.search-in .ico { position: absolute; left: 15px; top: 14px; width: 22px; height: 22px; color: var(--muted); pointer-events: none; }
+.search-in .clear { position: absolute; right: 8px; top: 8px; width: 36px; height: 36px; border-radius: 10px; border: 0; background: var(--surface-2); font-size: 18px; line-height: 1; }
+.chips { display: flex; gap: 8px; margin-top: 10px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.chips::-webkit-scrollbar { display: none; }
+.chip { flex: none; border: 1.5px solid var(--line); background: var(--surface); border-radius: 999px; padding: 7px 14px; font-weight: 600; font-size: 14.5px; min-height: 40px; }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.filters2 { display: flex; gap: 10px; margin-top: 10px; align-items: center; }
+.filters2 .select { min-height: 42px; width: auto; padding-top: 7px; padding-bottom: 7px; font-size: 15px; }
+.filters2 .count { margin-left: auto; color: var(--muted); font-size: 14.5px; white-space: nowrap; }
+@media (max-width: 520px) { .filters2 .select { flex: 1; min-width: 0; } .filters2 .count { display: none; } }
+.empty { background: var(--surface); border: 1.5px dashed var(--line); border-radius: var(--r-lg); padding: 36px 24px; text-align: center; display: grid; gap: 10px; justify-items: center; }
+.empty .e { font-size: 44px; }
+.empty p { color: var(--muted); max-width: 44ch; }
+
+/* ---------- Product page ---------- */
+.prod { display: grid; grid-template-columns: 1fr 1fr; gap: 36px; align-items: start; padding-bottom: 20px; }
+.prod .thumb { border-radius: var(--r-lg); font-size: 140px; aspect-ratio: 1 / 1; position: sticky; top: 90px; }
+.prod h1 { font-family: var(--display); font-weight: 800; font-size: clamp(30px, 4vw, 44px); letter-spacing: -0.03em; line-height: 1.02; }
+.tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+.tag { background: var(--surface-2); border-radius: 999px; padding: 3px 11px; font-size: 13.5px; font-weight: 600; text-decoration: none; }
+.tag.hot { background: color-mix(in srgb, var(--hot) 16%, transparent); color: var(--hot); }
+.opt-h { margin: 26px 0 10px; font-weight: 700; font-size: 15.5px; }
+.conds { display: grid; gap: 8px; }
+.cond { display: flex; align-items: center; gap: 12px; background: var(--surface); border: 1.5px solid var(--line); border-radius: 12px; padding: 12px 14px; cursor: pointer; }
+.cond:has(input:checked) { border-color: var(--cobalt); box-shadow: 0 0 0 1px var(--cobalt); }
+.cond input { accent-color: var(--cobalt); width: 18px; height: 18px; flex: none; }
+.cond .l { flex: 1; }
+.cond .l b { display: block; font-size: 15.5px; }
+.cond .l small { color: var(--muted); font-size: 13.5px; }
+.cond .p { font-family: var(--display); font-weight: 700; font-size: 17px; }
+.seg { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.buybox { margin-top: 24px; display: flex; align-items: center; gap: 18px; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 20px; }
+.buybox .sticker .amt { font-size: 34px; }
+.buybox .sticker { padding: 10px 18px 10px 30px; }
+.buybox .sticker::before { left: 11px; width: 10px; height: 10px; margin-top: -5px; }
+.buybox .right { flex: 1; display: flex; gap: 10px; min-width: 240px; }
+.stepper { display: inline-flex; align-items: center; border: 1.5px solid var(--line); border-radius: 12px; height: 48px; background: var(--surface); }
+.stepper button { width: 42px; height: 100%; border: 0; background: none; font-size: 20px; }
+.stepper span { min-width: 26px; text-align: center; font-weight: 700; }
+.note { margin-top: 16px; font-size: 14.5px; color: var(--muted); }
+@media (max-width: 860px) {
+  .prod { grid-template-columns: 1fr; gap: 20px; }
+  .prod .thumb { position: relative; top: auto; aspect-ratio: 16 / 9; font-size: 90px; }
+  .buybox .right { min-width: 100%; }
+  .buybox .right .btn { flex: 1; }
+}
+
+/* ---------- Hot list ---------- */
+.acc { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); margin-bottom: 10px; overflow: hidden; }
+.acc summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 12px; padding: 16px 18px; font-weight: 700; font-size: 17px; }
+.acc summary::-webkit-details-marker { display: none; }
+.acc summary .n { margin-left: auto; color: var(--muted); font-weight: 500; font-size: 14.5px; }
+.acc summary .chev { width: 20px; height: 20px; transition: transform .2s; color: var(--muted); }
+.acc[open] summary .chev { transform: rotate(180deg); }
+.hrow { display: flex; align-items: center; gap: 14px; padding: 12px 18px; border-top: 1px solid var(--line); }
+.hrow .em { width: 44px; height: 44px; border-radius: 10px; display: grid; place-items: center; font-size: 24px; flex: none; }
+.hrow a.nm { flex: 1; text-decoration: none; font-weight: 600; line-height: 1.3; }
+.hrow a.nm:hover { text-decoration: underline; }
+.hrow a.nm small { display: block; color: var(--muted); font-weight: 500; font-size: 13.5px; }
+.hrow .pr { font-family: var(--display); font-weight: 700; font-size: 17px; white-space: nowrap; }
+.hrow .btn { min-height: 38px; width: 38px; padding: 0; font-size: 20px; }
+
+/* ---------- Two col / panels ---------- */
+.two { display: grid; grid-template-columns: 1.15fr .85fr; gap: 24px; align-items: start; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 26px; }
+.panel h2 { font-size: 26px; margin-bottom: 6px; }
+.panel > p.muted { margin-bottom: 18px; }
+@media (max-width: 860px) { .two { grid-template-columns: 1fr; } .panel { padding: 20px; } }
+.tabs { display: grid; grid-template-columns: 1fr 1fr; background: var(--surface-2); padding: 4px; border-radius: 12px; margin-bottom: 18px; }
+.tabs button { border: 0; background: none; border-radius: 9px; min-height: 42px; font-weight: 700; color: var(--muted); }
+.tabs button[aria-selected="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+.drop { border: 2px dashed var(--line); border-radius: 14px; padding: 18px; text-align: center; cursor: pointer; display: grid; gap: 4px; background: var(--paper); }
+.drop:hover, .drop.over { border-color: var(--cobalt); }
+.drop input { display: none; }
+.drop b { color: var(--cobalt); }
+.previews { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 8px; margin-top: 10px; }
+.previews div { aspect-ratio: 1; border-radius: 10px; background: var(--surface-2) center / cover; display: grid; place-items: center; font-size: 12px; color: var(--muted); text-align: center; padding: 4px; overflow: hidden; word-break: break-all; }
+.success { text-align: center; padding: 20px 6px; display: grid; gap: 10px; justify-items: center; }
+.success .e { width: 64px; height: 64px; border-radius: 50%; background: var(--ok-bg); color: var(--ok); display: grid; place-items: center; font-size: 30px; }
+.checklist { list-style: none; display: grid; gap: 14px; counter-reset: c; }
+.checklist li { display: grid; grid-template-columns: 32px 1fr; gap: 12px; counter-increment: c; }
+.checklist li::before { content: counter(c); width: 32px; height: 32px; border-radius: 50%; background: var(--sticker); color: var(--on-sticker); display: grid; place-items: center; font-weight: 800; font-family: var(--display); }
+.checklist b { display: block; }
+.checklist span { color: var(--muted); font-size: 15px; }
+
+/* ---------- FAQ ---------- */
+.faq details { border-bottom: 1px solid var(--line); }
+.faq summary { list-style: none; cursor: pointer; padding: 16px 0; font-weight: 600; font-size: 16.5px; display: flex; justify-content: space-between; gap: 16px; }
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::after { content: "+"; font-size: 24px; line-height: 1; color: var(--muted); transition: transform .2s; }
+.faq details[open] summary::after { transform: rotate(45deg); }
+.faq p { padding: 0 0 18px; color: var(--muted); max-width: 64ch; }
+
+/* ---------- Sending / checkout ---------- */
+.co { display: grid; grid-template-columns: 1fr 380px; gap: 24px; align-items: start; }
+.co-side { position: sticky; top: 84px; }
+@media (max-width: 960px) { .co { grid-template-columns: 1fr; } .co-side { position: static; } }
+.lines { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); }
+.line { display: grid; grid-template-columns: 64px 1fr auto; gap: 14px; padding: 16px; align-items: start; }
+.line + .line { border-top: 1px solid var(--line); }
+.line .em { width: 64px; height: 64px; border-radius: 12px; display: grid; place-items: center; font-size: 32px; }
+.line .nm { font-weight: 700; text-decoration: none; line-height: 1.3; display: block; }
+.line .opts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; align-items: center; }
+.line .opts .select { min-height: 38px; width: auto; padding: 5px 34px 5px 10px; font-size: 14.5px; border-radius: 10px; background-position: calc(100% - 17px) 50%, calc(100% - 11px) 50%; }
+.line .opts .stepper { height: 38px; border-radius: 10px; }
+.line .opts .stepper button { width: 34px; font-size: 18px; }
+.line .pr { font-family: var(--display); font-weight: 700; font-size: 18px; text-align: right; white-space: nowrap; }
+.line .pr small { display: block; font-family: var(--body); font-weight: 500; font-size: 13px; color: var(--muted); }
+.line .rm { background: none; border: 0; color: var(--muted); font-size: 13.5px; text-decoration: underline; margin-top: 6px; padding: 4px 0; }
+@media (max-width: 520px) {
+  .line { grid-template-columns: 48px 1fr; }
+  .line .em { width: 48px; height: 48px; font-size: 24px; }
+  .line .pr { grid-column: 2; text-align: left; display: flex; align-items: baseline; gap: 8px; }
+}
+.pay { display: grid; gap: 8px; }
+.sum { display: grid; gap: 8px; margin: 4px 0 16px; }
+.sum div { display: flex; justify-content: space-between; gap: 12px; font-size: 15px; }
+.sum .bonus { color: var(--ok); font-weight: 600; }
+.sum .tot { border-top: 1.5px solid var(--ink); padding-top: 12px; margin-top: 4px; align-items: center; }
+.sum .tot b { font-family: var(--display); font-size: 30px; letter-spacing: -0.02em; }
+.fine { font-size: 13.5px; color: var(--muted); margin-top: 12px; }
+.err { color: var(--danger); font-size: 14px; font-weight: 600; margin: -6px 0 12px; }
+
+/* ---------- Order / label ---------- */
+.timeline { list-style: none; display: grid; gap: 0; }
+.timeline li { display: grid; grid-template-columns: 28px 1fr; gap: 12px; position: relative; padding-bottom: 18px; }
+.timeline li::before { content: ""; width: 14px; height: 14px; border-radius: 50%; margin: 5px 7px 0; border: 2.5px solid var(--line); background: var(--surface); z-index: 1; }
+.timeline li::after { content: ""; position: absolute; left: 13px; top: 20px; bottom: 0; width: 2px; background: var(--line); }
+.timeline li:last-child::after { display: none; }
+.timeline li.done::before { background: var(--ok); border-color: var(--ok); }
+.timeline li.done::after { background: var(--ok); }
+.timeline li.now::before { border-color: var(--cobalt); box-shadow: 0 0 0 4px color-mix(in srgb, var(--cobalt) 20%, transparent); }
+.timeline b { display: block; }
+.timeline span { color: var(--muted); font-size: 14.5px; }
+.label {
+  background: #fff; color: #111; border-radius: 10px; border: 2px solid #111; padding: 18px; font-size: 14px; line-height: 1.35;
+  box-shadow: 0 16px 30px -18px rgba(0,0,0,.4); max-width: 440px;
+}
+.label .lh { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #111; padding-bottom: 10px; margin-bottom: 10px; font-family: var(--display); font-weight: 800; font-size: 18px; }
+.label .lh span { background: #111; color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 14px; }
+.label .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.label .k { font-size: 11.5px; font-weight: 700; color: #555; }
+.label .bars { display: flex; height: 64px; gap: 0; margin: 14px 0 4px; align-items: stretch; }
+.label .bars i { background: #111; display: block; }
+.label .code { text-align: center; font-weight: 700; letter-spacing: .3em; font-size: 15px; }
+.orders { display: grid; gap: 10px; }
+.order-row { display: flex; gap: 14px; align-items: center; text-decoration: none; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 14px 16px; }
+.order-row:hover { border-color: var(--ink); }
+.order-row .id { font-weight: 700; }
+.order-row .d { color: var(--muted); font-size: 14px; }
+.order-row .amt { margin-left: auto; font-family: var(--display); font-weight: 700; font-size: 18px; text-align: right; }
+.pill { display: inline-block; font-size: 12.5px; font-weight: 700; padding: 2px 9px; border-radius: 999px; background: var(--surface-2); }
+.pill.ok { background: var(--ok-bg); color: var(--ok); }
+
+/* ---------- Cards page (bulk) ---------- */
+.cards-head { display: grid; grid-template-columns: 1fr 360px; gap: 24px; align-items: end; }
+.cards-head .page-h { padding-bottom: 0; }
+.coll { display: grid; gap: 6px; text-decoration: none; background: var(--ink); color: var(--paper); border-radius: var(--r-lg); padding: 20px 22px; }
+.coll b { font-family: var(--display); font-size: 20px; letter-spacing: -0.02em; }
+.coll span { color: color-mix(in srgb, var(--paper) 72%, transparent); font-size: 14.5px; }
+.coll .go { color: var(--sticker); font-weight: 700; margin-top: 4px; }
+.coll:hover .go { text-decoration: underline; text-underline-offset: 3px; }
+@media (max-width: 860px) { .cards-head { grid-template-columns: 1fr; gap: 16px; } }
+.bulk-h { margin-bottom: 16px; }
+.bulk { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+@media (max-width: 1100px) { .bulk { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 760px) { .bulk { grid-template-columns: repeat(2, 1fr); gap: 10px; } }
+.btile { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+.btile .bh { display: flex; gap: 12px; align-items: center; min-height: 52px; }
+.btile .code { flex: none; width: 48px; height: 48px; border-radius: 12px; background: var(--t-kort); display: grid; place-items: center; font-family: var(--display); font-weight: 800; font-size: 15px; letter-spacing: -0.02em; }
+.btile.acc-t .code { background: var(--t-tilbeh); }
+.btile b { display: block; font-size: 15px; line-height: 1.25; }
+.btile .rate { display: block; color: var(--ok); font-weight: 600; font-size: 13.5px; margin-top: 2px; }
+.btile .q { display: flex; gap: 10px; align-items: center; margin-top: auto; }
+.btile .tot { flex: none; min-width: 64px; }
+.btile .tot small { display: block; color: var(--muted); font-size: 12px; font-weight: 600; }
+.btile .tot span { font-family: var(--display); font-weight: 800; font-size: 17px; }
+.btile .q .input { min-height: 42px; flex: 1; min-width: 0; padding: 8px 10px; }
+.btile .incart { font-size: 13px; color: var(--muted); margin-top: -4px; }
+.btile .incart b { display: inline; font-size: 13px; color: var(--ok); }
+.btile.payout { background: var(--ink); color: var(--paper); border: 0; text-align: center; justify-content: center; }
+.btile.payout small { color: color-mix(in srgb, var(--paper) 65%, transparent); font-size: 13px; margin-top: -8px; }
+.btile.payout .big { font-family: var(--display); font-weight: 800; font-size: 38px; letter-spacing: -0.03em; line-height: 1; }
+.btile.payout .big.pop { animation: pop .35s ease; --rot: 0deg; }
+.btile.payout .btn { background: var(--sticker); color: var(--on-sticker); }
+@media (max-width: 520px) {
+  .btile { padding: 12px; gap: 10px; }
+  .btile .bh { flex-direction: column; align-items: flex-start; gap: 8px; min-height: 0; }
+  .btile .code { width: 40px; height: 40px; font-size: 13px; }
+  .btile b { font-size: 14px; }
+  .btile .q { flex-direction: column; align-items: stretch; gap: 6px; }
+  .btile .tot { display: flex; justify-content: space-between; align-items: baseline; }
+  .btile .btn.small { font-size: 13.5px; padding: 0 8px; }
+  .btile.payout .big { font-size: 28px; }
+  .hide-s { display: none; }
+}
+.nope { margin-top: 12px; background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--hot); border-radius: var(--r-md); padding: 20px 22px; }
+.nope ul { columns: 2; column-gap: 32px; }
+@media (max-width: 600px) { .nope ul { columns: 1; } }
+.nope ul { margin: 10px 0 0 20px; color: var(--muted); display: grid; gap: 4px; }
+.line .bq { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--muted); }
+.line .bq .input { min-height: 38px; width: 110px; padding: 6px 10px; border-radius: 10px; }
+
+/* ---------- Footer ---------- */
+.foot { margin-top: 56px; border-top: 1px solid var(--line); padding: 36px 0 40px; }
+.foot-in { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 24px; }
+.foot p { color: var(--muted); font-size: 14.5px; margin-top: 10px; max-width: 36ch; }
+.foot h4 { font-size: 14.5px; margin-bottom: 8px; }
+.foot ul { list-style: none; display: grid; gap: 6px; }
+.foot ul a { color: var(--muted); text-decoration: none; font-size: 15px; }
+.foot ul a:hover { color: var(--ink); text-decoration: underline; }
+@media (max-width: 760px) { .foot-in { grid-template-columns: 1fr 1fr; } .foot-in > div:first-child { grid-column: 1 / -1; } }
+.prose { max-width: 68ch; }
+.prose h2 { font-size: 22px; margin: 26px 0 8px; }
+.prose p, .prose li { color: var(--muted); margin-bottom: 10px; }
+.prose ul { padding-left: 20px; }
+
+/* ---------- Toast ---------- */
+.toast {
+  position: fixed; left: 50%; bottom: calc(var(--tabbar) + 18px); z-index: 60;
+  transform: translate(-50%, 20px); opacity: 0; pointer-events: none;
+  background: var(--ink); color: var(--paper); border-radius: 14px; padding: 12px 14px 12px 18px;
+  display: flex; align-items: center; gap: 14px; width: max-content; max-width: calc(100% - 24px);
+  box-shadow: 0 16px 40px -12px rgba(0,0,0,.5); transition: opacity .2s, transform .2s; font-weight: 500; font-size: 15px;
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
+.toast a { color: var(--sticker); font-weight: 700; white-space: nowrap; }
+main { min-height: 60vh; }
+main:focus { outline: none; }
+
+/* ---------- Quote flow ---------- */
+.t-Samling { background: var(--t-samle); } .t-Annet { background: var(--surface-2); }
+.small { font-size: 14px; }
+.ph-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; }
+.ph { position: relative; aspect-ratio: 1; border-radius: 10px; overflow: hidden; background: var(--surface-2); }
+.ph img { width: 100%; height: 100%; object-fit: cover; cursor: zoom-in; }
+.ph-x { position: absolute; top: 4px; right: 4px; width: 26px; height: 26px; border-radius: 50%; border: 0; background: rgba(0,0,0,.65); color: #fff; font-size: 16px; line-height: 1; }
+.ph-add { aspect-ratio: 1; border-radius: 10px; border: 2px dashed var(--line); display: grid; place-items: center; align-content: center; gap: 2px; cursor: pointer; color: var(--muted); background: var(--paper); text-align: center; padding: 4px; }
+.ph-add:hover { border-color: var(--cobalt); color: var(--cobalt); }
+.ph-add span { font-size: 26px; line-height: 1; font-weight: 300; }
+.ph-add small { font-size: 12px; font-weight: 600; }
+.strip { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.strip img { width: 56px; height: 56px; border-radius: 8px; object-fit: cover; cursor: zoom-in; background: var(--surface-2); }
+.warn { display: inline-block; font-size: 12.5px; font-weight: 600; color: var(--hot); background: color-mix(in srgb, var(--hot) 12%, transparent); padding: 2px 9px; border-radius: 999px; margin-top: 6px; }
+.qline { display: grid; grid-template-columns: 64px 1fr auto; gap: 14px; padding: 16px; align-items: start; }
+.qline + .qline { border-top: 1px solid var(--line); }
+.qline .em { width: 64px; height: 64px; border-radius: 12px; display: grid; place-items: center; font-size: 30px; overflow: hidden; }
+.qline .em img { width: 100%; height: 100%; object-fit: cover; }
+.qline .nm { font-weight: 700; line-height: 1.3; }
+.qline .sub { color: var(--muted); font-size: 14px; }
+.qline .acts { display: flex; gap: 14px; margin-top: 6px; }
+.qline .acts a, .qline .acts button { background: none; border: 0; padding: 4px 0; color: var(--muted); font-size: 13.5px; text-decoration: underline; }
+.qline .pr { font-family: var(--display); font-weight: 700; font-size: 17px; text-align: right; white-space: nowrap; }
+.qline .pr small { display: block; font-family: var(--body); font-weight: 500; font-size: 12.5px; color: var(--muted); }
+.qline .pr .q { font-family: var(--body); font-size: 13.5px; font-weight: 600; color: var(--muted); }
+@media (max-width: 520px) { .qline { grid-template-columns: 52px 1fr; } .qline .em { width: 52px; height: 52px; font-size: 24px; } .qline .pr { grid-column: 2; text-align: left; } }
+.grp-h { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 16px 16px 0; }
+.grp-h h3 { font-size: 17px; }
+.grp-h span { color: var(--muted); font-size: 13.5px; }
+.lines .grp + .grp { border-top: 1px solid var(--line); }
+.addmore { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+.admin-note { margin-top: 8px; font-size: 14px; background: var(--surface-2); border-radius: 10px; padding: 8px 12px; }
+.admin-note b { font-size: 12.5px; display: block; color: var(--muted); }
+
+/* ---------- Status pills ---------- */
+.pill.st-venter_bud { background: color-mix(in srgb, var(--sticker) 55%, transparent); color: var(--on-sticker); }
+.pill.st-bud_sendt { background: var(--cobalt); color: var(--on-cobalt); }
+.pill.st-godtatt { background: var(--ok-bg); color: var(--ok); }
+.pill.st-mottatt { background: var(--t-elek); color: var(--ink); }
+.pill.st-utbetalt { background: var(--ok); color: var(--surface); }
+.pill.st-avslatt, .pill.st-kansellert { background: var(--surface-2); color: var(--muted); }
+.order-row.hl { border-color: var(--cobalt); box-shadow: 0 0 0 1px var(--cobalt); }
+
+/* ---------- Offer ---------- */
+.offer { border: 2px solid var(--cobalt); }
+.oline { display: grid; grid-template-columns: 26px 1fr auto; gap: 12px; padding: 14px 0; border-top: 1px solid var(--line); align-items: start; cursor: pointer; }
+.oline input { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--cobalt); }
+.oline.no { opacity: .55; cursor: default; }
+.oline .p { font-family: var(--display); font-weight: 700; font-size: 18px; white-space: nowrap; }
+.offer-tot { display: flex; justify-content: space-between; align-items: center; border-top: 1.5px solid var(--ink); padding-top: 14px; margin: 4px 0 16px; }
+.offer-tot b { font-family: var(--display); font-size: 32px; letter-spacing: -0.02em; }
+.btnrow { display: flex; gap: 10px; flex-wrap: wrap; }
+.btnrow .btn { flex: 1; min-width: 160px; }
+.sold { font-size: 12.5px; font-weight: 700; border-radius: 999px; padding: 2px 9px; background: var(--ok-bg); color: var(--ok); display: inline-block; margin-top: 6px; }
+.sold.kept { background: var(--surface-2); color: var(--muted); }
+
+/* ---------- Messages ---------- */
+.msgs { display: grid; gap: 10px; margin-bottom: 14px; max-height: 460px; overflow-y: auto; }
+.msg { border-radius: 14px; padding: 10px 14px; background: var(--surface-2); max-width: 88%; font-size: 15px; }
+.msg.kunde { justify-self: end; background: color-mix(in srgb, var(--cobalt) 14%, var(--surface)); }
+.msg.admin { justify-self: start; background: var(--surface-2); }
+.msg.system { justify-self: center; background: none; color: var(--muted); font-size: 13px; padding: 2px 8px; text-align: center; }
+.msg .who { font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 2px; }
+.msg p { white-space: pre-wrap; word-break: break-word; }
+.msg .strip img { width: 64px; height: 64px; }
+.msgform .textarea { min-height: 80px; }
+.msgform .ph-grid { grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); margin: 8px 0 12px; }
+
+/* ---------- Lightbox ---------- */
+.lb { position: fixed; inset: 0; z-index: 90; background: rgba(5,8,18,.9); display: grid; place-items: center; padding: calc(env(safe-area-inset-top, 0px) + 16px) 16px calc(env(safe-area-inset-bottom, 0px) + 16px); cursor: zoom-out; }
+.lb img { max-width: 100%; max-height: 100%; border-radius: 8px; }
+.lb-x { position: absolute; top: calc(env(safe-area-inset-top, 0px) + 12px); right: 12px; width: 44px; height: 44px; border-radius: 50%; border: 0; background: rgba(255,255,255,.15); color: #fff; font-size: 26px; }
+
+/* ---------- Hero example ---------- */
+.ex-offer { display: grid; gap: 14px; }
+.ex-offer .eh { display: flex; justify-content: space-between; align-items: center; color: var(--muted); font-size: 13.5px; font-weight: 600; }
+.ex-offer .row { display: flex; align-items: center; gap: 12px; }
+.ex-offer .row .em { width: 44px; height: 44px; border-radius: 10px; display: grid; place-items: center; font-size: 22px; flex: none; }
+.ex-offer .row .nm { flex: 1; font-weight: 600; font-size: 15px; line-height: 1.3; }
+.ex-offer .row .nm small { display: block; color: var(--muted); font-weight: 500; font-size: 13px; }
+.ex-offer .row .ph3 { display: flex; gap: 3px; }
+.ex-offer .row .ph3 i { width: 18px; height: 22px; border-radius: 3px; background: var(--surface-2); border: 1px solid var(--line); }
+.ex-offer .foot { display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed var(--line); padding-top: 16px; gap: 12px; flex-wrap: wrap; }
+
+/* ---------- Admin ---------- */
+.demo-bar { background: color-mix(in srgb, var(--sticker) 40%, var(--surface)); color: var(--ink); border-radius: 12px; padding: 10px 14px; font-size: 14px; margin: 14px 0 0; }
+.stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin: 18px 0 10px; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 14px 16px; text-align: left; cursor: pointer; }
+.stat[aria-pressed="true"] { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }
+.stat b { display: block; font-family: var(--display); font-size: 30px; letter-spacing: -0.02em; line-height: 1.1; }
+.stat span { color: var(--muted); font-size: 13.5px; font-weight: 600; }
+.stat.urgent b { color: var(--hot); }
+@media (max-width: 860px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+.adm-list { display: grid; gap: 8px; margin-top: 12px; }
+.adm-row { display: grid; grid-template-columns: 110px 1.4fr 1fr 150px 110px; gap: 12px; align-items: center; text-decoration: none; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 12px 16px; }
+.adm-row:hover { border-color: var(--ink); }
+.adm-row .ref { font-weight: 700; font-variant-numeric: tabular-nums; }
+.adm-row .who b { display: block; font-size: 15px; }
+.adm-row .who span, .adm-row .what { color: var(--muted); font-size: 13.5px; }
+.adm-row .amt { font-family: var(--display); font-weight: 700; text-align: right; }
+.adm-row .pill { justify-self: start; }
+@media (max-width: 860px) { .adm-row { grid-template-columns: 1fr auto; gap: 4px 12px; } .adm-row .what { grid-column: 1; } .adm-row .pill { grid-row: 1; grid-column: 2; justify-self: end; } .adm-row .amt { grid-column: 2; } }
+.aitem { padding: 16px 0; border-top: 1px solid var(--line); }
+.aitem:first-of-type { border-top: 0; padding-top: 4px; }
+.aitem .hd { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+.aitem .hd b { font-size: 16.5px; }
+.aitem .cnote { margin-top: 6px; font-size: 14.5px; background: var(--paper); border-radius: 10px; padding: 8px 12px; white-space: pre-wrap; }
+.aitem .strip img { width: 84px; height: 84px; }
+.aitem .ain { display: grid; grid-template-columns: 150px 1fr; gap: 10px; margin-top: 12px; }
+.aitem .ain .input { min-height: 44px; }
+@media (max-width: 520px) { .aitem .ain { grid-template-columns: 1fr; } .aitem .strip img { width: 68px; height: 68px; } }
+.kv { display: grid; grid-template-columns: 110px 1fr; gap: 6px 12px; font-size: 14.5px; }
+.kv dt { color: var(--muted); }
+.kv dd { word-break: break-word; }
+.stack { display: grid; gap: 16px; }
+.rates { display: grid; gap: 8px; }
+.rates label { display: grid; grid-template-columns: 1fr 140px; gap: 12px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; }
+.rates label small { display: block; color: var(--muted); }
+.rates .input { min-height: 42px; text-align: right; }
+.loading { padding: 80px 0; text-align: center; color: var(--muted); }
+
+/* ---------- Pictures, dropdown, scanner ---------- */
+.thumb, .pi, .em { position: relative; }
+.pic { position: absolute; inset: 8%; width: 84%; height: 84%; object-fit: contain; }
+.has-pic > .emo { visibility: hidden; }
+.card .thumb .hotflag { z-index: 1; }
+.pi { width: 44px; height: 54px; border-radius: 8px; display: grid; place-items: center; font-size: 22px; flex: none; overflow: hidden; background: var(--surface-2); }
+.pi .pic { inset: 4%; width: 92%; height: 92%; }
+.suggest .pick .nm small { display: block; color: var(--muted); font-weight: 500; font-size: 13px; }
+.suggest .pick .pr { color: var(--cobalt); font-weight: 700; font-family: var(--body); font-size: 14px; }
+.suggest .own .pi { background: none; border: 1.5px dashed var(--line); color: var(--muted); }
+.sug-h { font-size: 12.5px; font-weight: 700; color: var(--muted); padding: 8px 4px 0; }
+.scan-cta { margin-top: 10px; width: auto; }
+.refrow { display: flex; gap: 12px; align-items: center; margin-top: 10px; }
+.refimg { width: 64px; height: 80px; object-fit: contain; background: var(--surface-2); border-radius: 8px; cursor: zoom-in; flex: none; }
+.credits { font-size: 13px !important; }
+.credits a { color: inherit; }
+.scan { position: fixed; inset: 0; z-index: 85; background: rgba(5,8,18,.88); display: grid; place-items: center; padding: calc(env(safe-area-inset-top, 0px) + 12px) 12px calc(env(safe-area-inset-bottom, 0px) + 12px); }
+.scan-box { background: var(--surface); color: var(--ink); border-radius: 20px; width: min(480px, 100%); max-height: 100%; overflow-y: auto; padding: 16px; display: grid; gap: 12px; }
+.scan-h { display: flex; justify-content: space-between; align-items: center; }
+.scan-x { width: 40px; height: 40px; border-radius: 50%; border: 0; background: var(--surface-2); font-size: 24px; line-height: 1; }
+.scan-cam { position: relative; aspect-ratio: 4 / 3; background: #000; border-radius: 14px; overflow: hidden; }
+.scan-cam video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.scan-cam .aim { position: absolute; left: 8%; right: 8%; top: 30%; bottom: 30%; border: 3px solid var(--sticker); border-radius: 12px; box-shadow: 0 0 0 999px rgba(0,0,0,.35); }
+.scan-cam .aim i { position: absolute; left: 6%; right: 6%; top: 50%; height: 2px; background: #ff4d4d; box-shadow: 0 0 8px #ff4d4d; animation: scanl 1.8s ease-in-out infinite; }
+@keyframes scanl { 0%, 100% { transform: translateY(-28px); } 50% { transform: translateY(28px); } }
+.scan .btnrow .btn { min-width: 0; }
+.scan-hit { display: flex; gap: 14px; align-items: center; background: var(--paper); border-radius: 14px; padding: 12px; }
+.scan-hit .pi { width: 72px; height: 88px; font-size: 32px; }
+.scan-hit b { font-size: 17px; line-height: 1.25; display: block; }
+[hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<a href="#main" class="sr" id="skip">Hopp til innhold</a>
+<header class="top">
+  <div class="wrap top-in">
+    <a class="logo" href="#/" aria-label="RaskBud, forsiden"><span class="logo-tag" aria-hidden="true">kr</span>RaskBud</a>
+    <nav class="nav" aria-label="Hovedmeny">
+      <a href="#/sok" data-nav="sok">Selg ting</a>
+      <a href="#/cards" data-nav="cards">Cards</a>
+      <a href="#/hot" data-nav="hot">Ser etter</a>
+      <a href="#/info" data-nav="info">Slik fungerer det</a>
+      <a href="#/admin" data-nav="admin" id="admin-link" hidden>Admin</a>
+    </nav>
+    <div class="top-actions">
+      <a class="acct-link" href="#/konto" data-nav="konto" id="acct-link">Logg inn</a>
+      <a class="bag" href="#/sending" id="bag" aria-label="Din sending"><span id="bag-total" class="num">Sending</span><span class="count num" id="bag-count">0</span></a>
+    </div>
+  </div>
+</header>
+
+<main id="main" tabindex="-1"></main>
+
+<footer class="foot">
+  <div class="wrap foot-in">
+    <div>
+      <a class="logo" href="#/"><span class="logo-tag" aria-hidden="true">kr</span>RaskBud</a>
+      <p>Vi kjøper brukte spill, konsoller, elektronikk og Pokémon-kort. Du får bud før du sender, frakten er gratis, og pengene kommer når pakken er sjekket.</p>
+      <p class="credits">Spilldata og bilder: <a href="https://thegamesdb.net" rel="noopener">TheGamesDB</a>, <a href="https://rawg.io" rel="noopener">RAWG</a> og <a href="https://www.wikipedia.org" rel="noopener">Wikipedia</a>.</p>
+    </div>
+    <div>
+      <h4>Selg</h4>
+      <ul>
+        <li><a href="#/sok">Finn tingen din</a></li>
+        <li><a href="#/vare/ny">Noe som ikke står i listen</a></li>
+        <li><a href="#/vare/ny?cat=Samling">Hel samling</a></li>
+        <li><a href="#/cards">Cards</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4>RaskBud</h4>
+      <ul>
+        <li><a href="#/info">Slik fungerer det</a></li>
+        <li><a href="#/info?k=1">Kontakt oss</a></li>
+        <li><a href="#/personvern">Personvern</a></li>
+        <li><a href="#/vilkar">Vilkår</a></li>
+      </ul>
+    </div>
+  </div>
+</footer>
+
+<nav class="tabbar" aria-label="Snarveier">
+  <a href="#/" data-nav="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Hjem</a>
+  <a href="#/sok" data-nav="sok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>Selg ting</a>
+  <a href="#/cards" data-nav="cards"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="8" y="3" width="12" height="16" rx="2" transform="rotate(8 14 11)"/><rect x="4" y="5" width="12" height="16" rx="2"/></svg>Cards</a>
+  <a href="#/sending" data-nav="sending"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5z"/><path d="m3 7.5 9 4.5 9-4.5M12 12v9"/></svg>Sending<span class="dot num" id="tab-dot" hidden>0</span></a>
+  <a href="#/konto" data-nav="konto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>Konto<span class="dot num" id="tab-offer" hidden>!</span></a>
+</nav>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* =====================================================================
+   OPPSETT
+   Fyll inn Supabase-nøklene for å gjøre siden ekte (se LES-MEG.md).
+   Uten nøkler kjører siden i demo-modus: alt lagres bare i nettleseren.
+   ===================================================================== */
+const CONFIG = {
+  supabaseUrl: "https://rcihqvobqzgfyblekwgp.supabase.co",
+  // Offentlig nøkkel: den skal stå i nettsiden. Sikkerheten ligger i databasereglene.
+  supabaseAnonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJjaWhxdm9icXpnZnlibGVrd2dwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAwNzk2OTAsImV4cCI6MjEwNTY1NTY5MH0.fu8y2rOYcQGdEPyxEd1dyZ0ZumgGaO8U1-QS6N6ocls",
+  demoAdminEmail: "admin@raskbud.no",
+  receiver: ["RaskBud mottak", "Din adresse 1", "0000 Sted"],
+  lookupUrl: ""             // tomt = bruker Supabase-funksjonen "lookup" automatisk
+};
+const LIVE = !!(CONFIG.supabaseUrl && CONFIG.supabaseAnonKey);
+const LOOKUP_URL = CONFIG.lookupUrl || (LIVE ? CONFIG.supabaseUrl.replace(/\/$/, "") + "/functions/v1/lookup" : "");
+
+/* =============================== Data =============================== */
+const CATALOG = [
+  // Konsoller: siste felt er Wikipedia-siden bildet hentes fra
+  ["ps5", "PlayStation 5", "Konsoll", "PS5", 1, "🎮", "PlayStation_5"], ["ps5d", "PlayStation 5 Digital", "Konsoll", "PS5", 1, "🕹️", "PlayStation_5"],
+  ["ps4", "PlayStation 4", "Konsoll", "PS4", 0, "🔵", "PlayStation_4"], ["ps4-pro", "PlayStation 4 Pro", "Konsoll", "PS4", 0, "🔵", "PlayStation_4"],
+  ["ps3", "PlayStation 3", "Konsoll", "PS3", 0, "⬛", "PlayStation_3"], ["ps2", "PlayStation 2", "Konsoll", "PS2", 0, "⬛", "PlayStation_2"],
+  ["ps1", "PlayStation (PS1)", "Konsoll", "PS1", 1, "⬜", "PlayStation_(console)"], ["psp", "PSP", "Konsoll", "PSP", 1, "📟", "PlayStation_Portable"],
+  ["vita", "PlayStation Vita", "Konsoll", "PS Vita", 1, "📟", "PlayStation_Vita"],
+  ["switch2", "Nintendo Switch 2", "Konsoll", "Switch 2", 1, "🔴", "Nintendo_Switch_2"], ["switch-oled", "Nintendo Switch OLED", "Konsoll", "Switch", 1, "🟥", "Nintendo_Switch"],
+  ["switch", "Nintendo Switch", "Konsoll", "Switch", 0, "🟥", "Nintendo_Switch"], ["switch-lite", "Nintendo Switch Lite", "Konsoll", "Switch", 0, "🟡", "Nintendo_Switch_Lite"],
+  ["wiiu", "Wii U", "Konsoll", "Wii U", 0, "⬜", "Wii_U"], ["wii", "Wii", "Konsoll", "Wii", 0, "⬜", "Wii"],
+  ["gc-console", "Nintendo GameCube", "Konsoll", "GameCube", 1, "🟪", "GameCube"], ["n64", "Nintendo 64", "Konsoll", "N64", 1, "🎲", "Nintendo_64"],
+  ["snes", "Super Nintendo (SNES)", "Konsoll", "SNES", 1, "🟪", "Super_Nintendo_Entertainment_System"], ["nes", "Nintendo NES", "Konsoll", "NES", 1, "🟥", "Nintendo_Entertainment_System"],
+  ["gb", "Game Boy", "Konsoll", "Game Boy", 1, "🟩", "Game_Boy"], ["gbc", "Game Boy Color", "Konsoll", "GBC", 0, "🟠", "Game_Boy_Color"],
+  ["gba", "Game Boy Advance", "Konsoll", "GBA", 1, "🟣", "Game_Boy_Advance"], ["gba-sp", "Game Boy Advance SP", "Konsoll", "GBA", 1, "🟩", "Game_Boy_Advance_SP"],
+  ["ds1", "Nintendo DS Lite", "Konsoll", "DS", 0, "📘", "Nintendo_DS_Lite"], ["3dsxl", "Nintendo 3DS / 3DS XL", "Konsoll", "3DS", 1, "🔷", "Nintendo_3DS"],
+  ["xbox-x", "Xbox Series X", "Konsoll", "Xbox Series", 1, "⬛", "Xbox_Series_X_and_Series_S"], ["xbox-s", "Xbox Series S", "Konsoll", "Xbox Series", 0, "⬜", "Xbox_Series_X_and_Series_S"],
+  ["xbox-one", "Xbox One", "Konsoll", "Xbox One", 0, "⬛", "Xbox_One"], ["x360", "Xbox 360", "Konsoll", "Xbox 360", 0, "⬜", "Xbox_360"],
+  ["xbox", "Xbox (original)", "Konsoll", "Xbox", 1, "⬛", "Xbox_(console)"],
+  ["megadrive", "Sega Mega Drive", "Konsoll", "Mega Drive", 1, "⬛", "Sega_Genesis"], ["dreamcast", "Sega Dreamcast", "Konsoll", "Dreamcast", 1, "⬜", "Dreamcast"],
+  ["saturn", "Sega Saturn", "Konsoll", "Saturn", 0, "⬛", "Sega_Saturn"], ["mastersystem", "Sega Master System", "Konsoll", "Master System", 0, "⬛", "Master_System"],
+  ["steamdeck", "Steam Deck", "Elektronikk", "Valve", 1, "🖥️", "Steam_Deck"],
+  // Tilbehør
+  ["dualsense", "DualSense-kontroll", "Tilbehør", "PS5", 0, "🎮"], ["gc-plat", "GameCube-kontroll", "Tilbehør", "GameCube", 1, "🎛️"],
+  ["wiiu-pad", "Wii U GamePad", "Tilbehør", "Wii U", 1, "📟"], ["procon", "Switch Pro Controller", "Tilbehør", "Switch", 0, "🎮"],
+  ["atari-drv", "Atari 2600 Driving Controller", "Tilbehør", "Atari", 0, "🏎️"],
+  // Spill (alle andre spill finnes i spilldatabasen når siden er koblet til)
+  ["thps3", "Tony Hawk's Pro Skater 3", "Spill", "PS2", 1, "🛹"], ["mario-pa", "Mario Party Advance", "Spill", "GBA", 1, "🎲"],
+  ["melee", "Super Smash Bros. Melee", "Spill", "GameCube", 1, "💥"], ["gravity", "Gravity Rush 2", "Spill", "PS4", 1, "🌙"],
+  ["moh", "Medal of Honor: Frontline", "Spill", "PS2", 0, "🎖️"], ["botw", "Zelda: Breath of the Wild", "Spill", "Switch", 1, "🗡️"],
+  ["totk", "Zelda: Tears of the Kingdom", "Spill", "Switch", 1, "🛡️"], ["mario-od", "Super Mario Odyssey", "Spill", "Switch", 1, "🧢"],
+  ["mk8", "Mario Kart 8 Deluxe", "Spill", "Switch", 0, "🏁"], ["smash", "Super Smash Bros. Ultimate", "Spill", "Switch", 1, "👊"],
+  ["pok-violet", "Pokémon Violet", "Spill", "Switch", 0, "🟣"], ["pok-scarlet", "Pokémon Scarlet", "Spill", "Switch", 0, "🔴"],
+  ["pok-emerald", "Pokémon Emerald", "Spill", "GBA", 1, "💎"], ["gta5", "Grand Theft Auto V", "Spill", "PS4", 0, "🚗"],
+  ["rdr2", "Red Dead Redemption 2", "Spill", "PS4", 0, "🤠"], ["gow", "God of War Ragnarök", "Spill", "PS5", 1, "🪓"],
+  ["spiderman2", "Marvel's Spider-Man 2", "Spill", "PS5", 1, "🕷️"], ["mk64", "Mario Kart 64", "Spill", "N64", 0, "🍄"],
+  // Kort, elektronikk, samleobjekter
+  ["psa-card", "Gradert Pokémon-kort (PSA/CGC)", "Kort", "Pokémon", 1, "🏅"], ["booster", "Pokémon booster box (uåpnet)", "Kort", "Pokémon", 1, "📦"],
+  ["etb", "Pokémon Elite Trainer Box (uåpnet)", "Kort", "Pokémon", 0, "🎁"],
+  ["iphone13", "iPhone 13", "Elektronikk", "Apple", 1, "📱", "IPhone_13"], ["iphone14", "iPhone 14", "Elektronikk", "Apple", 1, "📱", "IPhone_14"],
+  ["airpods", "AirPods Pro", "Elektronikk", "Apple", 0, "🎧", "AirPods_Pro"], ["ipad", "iPad", "Elektronikk", "Apple", 0, "📲", "IPad"],
+  ["lego-sw", "LEGO Star Wars UCS", "Samleobjekt", "LEGO", 1, "🧱"], ["funko", "Funko Pop (sjeldne)", "Samleobjekt", "Funko", 0, "🧸"],
+  ["vinyl", "Vinyl-LP", "Samleobjekt", "Musikk", 0, "💿"]
+].map(([id, name, cat, system, hot, icon, wiki]) => ({ id, name, cat, system, hot: !!hot, icon, wiki: wiki || null, brand: brandOf(system, name) }));
+function brandOf(system, name) {
+  const s = `${system} ${name}`.toLowerCase();
+  if (/ps\d|playstation|psp|vita/.test(s)) return "sony playstation";
+  if (/xbox/.test(s)) return "microsoft xbox";
+  if (/switch|wii|gamecube|n64|snes|nes\b|game boy|gba|gbc|\bds\b|3ds|nintendo/.test(s)) return "nintendo";
+  if (/sega|mega drive|dreamcast|saturn|master system/.test(s)) return "sega";
+  if (/apple|iphone|ipad|airpods/.test(s)) return "apple";
+  if (/valve|steam/.test(s)) return "valve steam";
+  return "";
+}
+const CATS = [
+  { name: "Spill", icon: "🕹️" }, { name: "Konsoll", icon: "🎮" }, { name: "Tilbehør", icon: "🎛️" }, { name: "Elektronikk", icon: "📱" },
+  { name: "Kort", icon: "🃏" }, { name: "Samleobjekt", icon: "🧱" }, { name: "Samling", icon: "🧰" }, { name: "Annet", icon: "📦" }
+];
+const catIcon = n => (CATS.find(c => c.name === n) || { icon: "📦" }).icon;
+const SYSTEMS = [...new Set(CATALOG.map(i => i.system))].sort((a, b) => a.localeCompare(b, "nb"));
+const CONDS = [
+  { id: "ny", name: "Som ny", desc: "Ingen synlige riper eller bruksmerker." },
+  { id: "pent", name: "Pent brukt", desc: "Små bruksmerker. Alt virker som det skal." },
+  { id: "brukt", name: "Brukt, virker", desc: "Tydelig brukt, riper eller slitasje." },
+  { id: "defekt", name: "Defekt eller til deler", desc: "Virker ikke, eller mangler deler." }
+];
+const COMP = {
+  "Spill": ["Komplett med eske og manual", "Eske uten manual", "Kun spillet"],
+  "Konsoll": ["Komplett i eske", "Uten eske, med kabler og kontroll", "Kun konsollen"],
+  "Tilbehør": ["I eske", "Uten eske"],
+  "Elektronikk": ["I eske med lader", "Uten eske, med lader", "Kun enheten"]
+};
+const BULK = [
+  ["b-unsorted", "U", "Usortert bulk", 0.1, "kort", 1000, "card"], ["b-common", "C/U", "Sortert common og uncommon", 0.2, "kort", 1000, "card"],
+  ["b-rare", "R", "Non-holo rare", 0.3, "kort", 1, "card"], ["b-holo", "H", "Holo og reverse holo (C/U/R)", 0.5, "kort", 1, "card"],
+  ["b-gx", "GX", "GX, EX og V (ultra rare)", 6, "kort", 1, "card"], ["b-vmax", "VM", "VMAX og VSTAR (ultra rare)", 6, "kort", 1, "card"],
+  ["b-amazing", "AR", "Amazing Rare", 5, "kort", 1, "card"], ["b-babyshiny", "BS", "Baby Shiny", 5, "kort", 1, "card"],
+  ["b-fullart", "FA", "Full Art Pokémon eller trainer", 7.5, "kort", 1, "card"], ["b-pika", "PK", "Pikachu ultra rare (V, VMAX, EX)", 7.5, "kort", 1, "card"],
+  ["b-gold", "GS", "Gold foil secret rare", 10, "kort", 1, "card"], ["b-tg", "TG", "Trainer Gallery, Galarian Gallery og Illustration Rare", 10, "kort", 1, "card"],
+  ["b-rainbow", "RB", "Rainbow foil ultra rare", 20, "kort", 1, "card"],
+  ["a-sleeves", "SL", "Offisielle ETB-sleeves (uåpnet)", 5, "pakker", 1, "acc"], ["a-coins", "CO", "Offisielle Pokémon-mynter", 0.1, "mynter", 1, "acc"],
+  ["a-pins", "PI", "Offisielle Pokémon-pins", 2.5, "pins", 1, "acc"]
+].map(([id, code, name, rate, unitName, per, group]) => ({ id, code, name, rate, unitName, per, group }));
+const RATES = Object.fromEntries(BULK.map(b => [b.id, b.rate]));
+const PAYOUTS = [{ id: "vipps", name: "Vipps", desc: "Innen 24 timer etter at pakken er sjekket" }, { id: "bank", name: "Bankkonto", desc: "1–2 virkedager etter at pakken er sjekket" }];
+const STATUS = {
+  venter_bud: { label: "Venter på bud", mine: "Venter på bud" },
+  bud_sendt: { label: "Bud sendt", mine: "Budet er klart" },
+  godtatt: { label: "Skal sendes", mine: "Klar til sending" },
+  mottatt: { label: "Mottatt", mine: "Mottatt, sjekkes" },
+  utbetalt: { label: "Utbetalt", mine: "Utbetalt" },
+  avslatt: { label: "Avslått av kunden", mine: "Du takket nei" },
+  kansellert: { label: "Kansellert", mine: "Kansellert" }
+};
+const byId = id => CATALOG.find(i => i.id === id);
+const bulkById = id => BULK.find(b => b.id === id);
+
+/* =============================== Helpers =============================== */
+const K = { draft: "rb_draft_v3", users: "rb_users_v3", session: "rb_session_v3", subs: "rb_subs_v3", seq: "rb_seq_v3", notes: "rb_notes_v3", settings: "rb_settings_v3", barcodes: "rb_barcodes_v3", wiki: "rb_wiki_v1" };
+function load(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } }
+function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch { return false; } }
+function drop(k) { try { localStorage.removeItem(k); } catch {} }
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const nf = new Intl.NumberFormat("nb-NO", { maximumFractionDigits: 0 });
+const nf2 = new Intl.NumberFormat("nb-NO", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const kr = n => (Math.abs(n - Math.round(n)) < 0.005 ? nf.format(Math.round(n)) : nf2.format(n)) + " kr";
+const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+const rate = id => Number(RATES[id] ?? bulkById(id)?.rate ?? 0);
+const rateText = b => b.per === 1000 ? `${kr(rate(b.id) * 1000)} per 1000 kort` : `${kr(rate(b.id))} per ${({ kort: "kort", pakker: "pakke", mynter: "mynt", pins: "pin" })[b.unitName] || b.unitName}`;
+const fmtDate = t => new Date(t).toLocaleDateString("nb-NO", { day: "numeric", month: "short", year: "numeric" });
+const fmtTime = t => new Date(t).toLocaleString("nb-NO", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+const pill = (st, mine) => `<span class="pill st-${st}">${esc(mine ? STATUS[st]?.mine : STATUS[st]?.label)}</span>`;
+const sysMsg = text => ({ by: "system", text, photos: [], at: Date.now() });
+const included = i => i.accepted !== false;
+const sumTotal = items => items.filter(i => included(i) && i.price != null).reduce((t, i) => t + Number(i.price), 0);
+function listJoin(a) { return a.length > 1 ? a.slice(0, -1).join(", ") + " og " + a[a.length - 1] : a[0] || ""; }
+function lineSummary(l) {
+  if (l.kind === "bulk") return `${nf.format(l.qty)} ${esc(l.unitName)}`;
+  return [CONDS.find(c => c.id === l.cond)?.name, l.comp ? l.comp.toLowerCase() : null, l.qty > 1 ? `${l.qty} stk` : null].filter(Boolean).map(esc).join(", ");
+}
+async function sha(s) {
+  try { const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s)); return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, "0")).join(""); }
+  catch { return "p:" + s; }
+}
+function dataUrlToBlob(d) {
+  const [head, body] = d.split(","); const mime = head.match(/:(.*?);/)[1]; const bin = atob(body);
+  const arr = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  return new Blob([arr], { type: mime });
+}
+function compress(file) {
+  return new Promise((res, rej) => {
+    if (!file.type.startsWith("image/")) return rej(new Error(`${file.name} er ikke et bilde.`));
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => {
+      const max = LIVE ? 1400 : 800; let w = img.naturalWidth, h = img.naturalHeight; const s = Math.min(1, max / Math.max(w, h));
+      w = Math.round(w * s); h = Math.round(h * s);
+      const c = document.createElement("canvas"); c.width = w; c.height = h; c.getContext("2d").drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url); res(c.toDataURL("image/jpeg", LIVE ? 0.8 : 0.6));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error(`Kunne ikke lese ${file.name}.`)); };
+    img.src = url;
+  });
+}
+function loadScript(src) { return new Promise((res, rej) => { const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = () => rej(new Error("Kunne ikke laste " + src)); document.head.appendChild(s); }); }
+
+let toastTimer;
+function toast(msg, href, label) {
+  const t = document.getElementById("toast");
+  t.innerHTML = `<span>${esc(msg)}</span>${href ? `<a href="${href}">${esc(label)}</a>` : ""}`;
+  t.classList.add("show"); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 3600);
+}
+function lightbox(src) {
+  const d = document.createElement("div"); d.className = "lb"; d.setAttribute("role", "dialog"); d.setAttribute("aria-label", "Bilde");
+  d.innerHTML = `<img src="${esc(src)}" alt=""><button class="lb-x" aria-label="Lukk">×</button>`;
+  const close = () => { d.remove(); document.removeEventListener("keydown", onKey); };
+  const onKey = e => { if (e.key === "Escape") close(); };
+  d.addEventListener("click", close); document.addEventListener("keydown", onKey); document.body.appendChild(d); d.querySelector("button").focus();
+}
+document.addEventListener("click", e => { const im = e.target.closest("[data-lb]"); if (im) lightbox(im.getAttribute("src")); });
+
+/* Photo picker: renders into a container and keeps an array in sync */
+function photoGrid(photos, max) {
+  return `<div class="ph-grid">${photos.map((p, k) => `<div class="ph"><img src="${esc(p)}" alt="Bilde ${k + 1}" data-lb><button type="button" class="ph-x" data-phx="${k}" aria-label="Fjern bilde ${k + 1}">×</button></div>`).join("")}
+    ${photos.length < max ? `<label class="ph-add"><input type="file" accept="image/*" multiple hidden data-phin /><span aria-hidden="true">+</span><small>${photos.length ? "Flere bilder" : "Legg til bilder"}</small></label>` : ""}</div>`;
+}
+function bindPhotos(box, arr, max, after) {
+  const draw = () => { box.innerHTML = photoGrid(arr, max); after && after(); };
+  box.addEventListener("change", async e => {
+    const inp = e.target.closest("[data-phin]"); if (!inp) return;
+    const files = [...inp.files].slice(0, max - arr.length);
+    if (inp.files.length > files.length) toast(`Du kan legge ved maks ${max} bilder.`);
+    for (const f of files) { try { arr.push(await compress(f)); } catch (err) { toast(err.message); } }
+    draw();
+  });
+  box.addEventListener("click", e => { const x = e.target.closest("[data-phx]"); if (x) { e.stopPropagation(); arr.splice(+x.dataset.phx, 1); draw(); } });
+  draw();
+}
+
+/* =============================== Draft (the sending being built) =============================== */
+let DRAFT = load(K.draft, { items: [] });
+function saveDraft() {
+  if (!save(K.draft, DRAFT)) toast("Nettleseren har ikke plass til flere bilder i utkastet. Send inn snart, eller fjern noen bilder.");
+  syncBag();
+}
+function addBulk(bulkId, qty) {
+  const b = bulkById(bulkId); const ex = DRAFT.items.find(l => l.kind === "bulk" && l.bulkId === bulkId);
+  if (ex) ex.qty += qty; else DRAFT.items.push({ lid: uid(), kind: "bulk", bulkId, name: b.name, unitName: b.unitName, qty });
+  saveDraft();
+}
+const draftBulkTotal = () => DRAFT.items.filter(l => l.kind === "bulk").reduce((t, l) => t + rate(l.bulkId) * l.qty, 0);
+const draftCount = () => DRAFT.items.reduce((n, l) => n + (l.kind === "bulk" ? 1 : l.qty), 0);
+
+/* =============================== Backend: demo (localStorage) =============================== */
+function priceItems(items) {
+  return items.map(it => it.kind === "bulk"
+    ? { ...it, price: Math.round(rate(it.bulkId) * it.qty * 100) / 100, accepted: null }
+    : { ...it, price: null, adminNote: "", accepted: null });
+}
+function applyResponse(s, accepted) {
+  s.items = s.items.map(i => ({ ...i, accepted: accepted.includes(i.lid) }));
+  const any = s.items.some(i => i.accepted);
+  s.status = any ? "godtatt" : "avslatt";
+  s.total = sumTotal(s.items);
+  s.messages.push(sysMsg(any ? `Kunden godtok budet på ${kr(s.total)}.` : "Kunden takket nei til budet."));
+  return s;
+}
+const LocalAPI = {
+  async init() {},
+  async me() {
+    const e = load(K.session, null); if (!e) return null;
+    const u = load(K.users, {})[e]; if (!u) return null;
+    return { id: e, email: e, name: u.name, isAdmin: e === CONFIG.demoAdminEmail, profile: u.profile || {} };
+  },
+  async signUp(email, pass, name) {
+    const us = load(K.users, {});
+    if (us[email]) throw new Error("Det finnes allerede en konto med denne e-posten. Logg inn i stedet.");
+    us[email] = { name, pass: await sha(pass), profile: { name } }; save(K.users, us); save(K.session, email);
+  },
+  async signIn(email, pass) {
+    const u = load(K.users, {})[email];
+    if (!u || u.pass !== await sha(pass)) throw new Error("Feil e-post eller passord.");
+    save(K.session, email);
+  },
+  async signOut() { drop(K.session); },
+  async saveProfile(p) {
+    const e = load(K.session, null); const us = load(K.users, {}); if (!us[e]) return;
+    us[e].profile = { ...us[e].profile, ...p }; if (p.name) us[e].name = p.name; save(K.users, us);
+  },
+  async uploadPhoto(d) { return d; },
+  _all() { return load(K.subs, []); },
+  _put(list) { if (!save(K.subs, list)) throw new Error("Demoen har ikke plass til flere bilder i nettleseren. Fjern noen bilder, eller slett gamle forespørsler i admin."); },
+  async createSubmission({ items, ship, payout }) {
+    const me = await this.me(); if (!me) throw new Error("Du må være logget inn.");
+    const seq = load(K.seq, 100000) + 1; save(K.seq, seq);
+    const priced = priceItems(items), hasQuote = priced.some(i => i.kind !== "bulk");
+    const s = { ref: "RB" + seq, userId: me.id, email: me.email, name: ship.name, status: hasQuote ? "venter_bud" : "godtatt", items: priced, ship, payout,
+      total: sumTotal(priced), paidAmount: null, createdAt: Date.now(), updatedAt: Date.now(), messages: [sysMsg(hasQuote ? "Forespørselen er sendt inn." : "Sendingen er registrert.")] };
+    const list = this._all(); list.unshift(s); this._put(list); return s.ref;
+  },
+  async mySubmissions() { const me = await this.me(); return this._all().filter(s => s.userId === me?.id); },
+  async allSubmissions() { const me = await this.me(); if (!me?.isAdmin) return []; return this._all(); },
+  async getSubmission(ref) {
+    const me = await this.me(); const s = this._all().find(x => x.ref === ref);
+    return s && me && (s.userId === me.id || me.isAdmin) ? s : null;
+  },
+  async _update(ref, fn) {
+    const list = this._all(); const i = list.findIndex(x => x.ref === ref);
+    if (i < 0) throw new Error("Fant ikke forespørselen.");
+    list[i] = fn(JSON.parse(JSON.stringify(list[i]))); list[i].updatedAt = Date.now(); this._put(list);
+  },
+  async respondOffer(ref, accepted) {
+    await this._update(ref, s => { if (s.status !== "bud_sendt") throw new Error("Budet er ikke lenger åpent."); return applyResponse(s, accepted); });
+  },
+  async addMessage(ref, text, photos) {
+    const me = await this.me();
+    await this._update(ref, s => { s.messages.push({ by: me.isAdmin && s.userId !== me.id ? "admin" : "kunde", text, photos, at: Date.now() }); return s; });
+  },
+  async adminUpdate(ref, patch) { await this._update(ref, s => ({ ...s, ...patch })); },
+  async deleteSubmission(ref) { this._put(this._all().filter(s => s.ref !== ref)); },
+  async getNote(ref) { return load(K.notes, {})[ref] || ""; },
+  async saveNote(ref, note) { const n = load(K.notes, {}); n[ref] = note; save(K.notes, n); },
+  async getSettings() { return load(K.settings, null); },
+  async getBarcode(code) { return load(K.barcodes, {})[code] || null; },
+  async saveBarcode(code, item) { const b = load(K.barcodes, {}); b[code] = { ...item, source: "admin" }; save(K.barcodes, b); },
+  async saveSettings(v) { save(K.settings, v); }
+};
+
+/* =============================== Backend: Supabase (live) =============================== */
+function fromRow(r) {
+  return { ref: r.ref, userId: r.user_id, email: r.email, name: r.name, status: r.status, items: r.items || [], ship: r.ship || {}, payout: r.payout || {},
+    total: Number(r.total || 0), paidAmount: r.paid_amount == null ? null : Number(r.paid_amount), createdAt: Date.parse(r.created_at), updatedAt: Date.parse(r.updated_at),
+    messages: (r.messages || []).map(m => ({ ...m, at: typeof m.at === "string" ? Date.parse(m.at) : m.at })) };
+}
+function niceErr(e) {
+  const m = String(e?.message || e);
+  if (/Invalid login/i.test(m)) return "Feil e-post eller passord.";
+  if (/already registered/i.test(m)) return "Det finnes allerede en konto med denne e-posten. Logg inn i stedet.";
+  if (/Email not confirmed/i.test(m)) return "Bekreft e-posten din først. Sjekk innboksen.";
+  if (/Password should be/i.test(m)) return "Passordet må ha minst 6 tegn.";
+  if (/Failed to fetch|NetworkError|Load failed|network/i.test(m)) return "Fikk ikke kontakt med serveren. Sjekk internett og prøv igjen.";
+  if (/rate limit|too many/i.test(m)) return "For mange forsøk. Vent litt og prøv igjen.";
+  return m;
+}
+const SupaAPI = {
+  sb: null,
+  async init() {
+    await loadScript("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js");
+    this.sb = window.supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseAnonKey);
+  },
+  async me() {
+    const { data: { session } } = await this.sb.auth.getSession(); if (!session) return null;
+    const { data: p } = await this.sb.from("profiles").select("*").eq("id", session.user.id).maybeSingle();
+    return { id: session.user.id, email: session.user.email, name: p?.name || session.user.email.split("@")[0], isAdmin: !!p?.is_admin, profile: p || {} };
+  },
+  async signUp(email, pass, name) {
+    const { data, error } = await this.sb.auth.signUp({ email, password: pass, options: { data: { name } } });
+    if (error) throw new Error(niceErr(error));
+    if (!data.session) throw new Error("Vi har sendt deg en e-post. Klikk på lenken for å bekrefte kontoen, og logg deretter inn.");
+  },
+  async signIn(email, pass) { const { error } = await this.sb.auth.signInWithPassword({ email, password: pass }); if (error) throw new Error(niceErr(error)); },
+  async signOut() { await this.sb.auth.signOut(); },
+  async saveProfile(p) {
+    const me = await this.me(); if (!me) return;
+    await this.sb.from("profiles").update({ name: p.name, phone: p.phone, addr: p.addr, zip: p.zip, city: p.city }).eq("id", me.id);
+  },
+  async uploadPhoto(d) {
+    if (!d.startsWith("data:")) return d;
+    const me = await this.me(); const path = `${me.id}/${(crypto.randomUUID ? crypto.randomUUID() : uid())}.jpg`;
+    const { error } = await this.sb.storage.from("photos").upload(path, dataUrlToBlob(d), { contentType: "image/jpeg" });
+    if (error) throw new Error("Kunne ikke laste opp bilde: " + error.message);
+    return this.sb.storage.from("photos").getPublicUrl(path).data.publicUrl;
+  },
+  async createSubmission({ items, ship, payout }) {
+    const { data, error } = await this.sb.rpc("create_submission", { p_items: items, p_ship: ship, p_payout: payout });
+    if (error) throw new Error(error.message); return data;
+  },
+  async mySubmissions() {
+    const me = await this.me();
+    const { data, error } = await this.sb.from("submissions").select("*").eq("user_id", me.id).order("created_at", { ascending: false });
+    if (error) throw new Error(error.message); return data.map(fromRow);
+  },
+  async allSubmissions() {
+    const { data, error } = await this.sb.from("submissions").select("*").order("created_at", { ascending: false }).limit(1000);
+    if (error) throw new Error(error.message); return data.map(fromRow);
+  },
+  async getSubmission(ref) { const { data } = await this.sb.from("submissions").select("*").eq("ref", ref).maybeSingle(); return data ? fromRow(data) : null; },
+  async respondOffer(ref, accepted) { const { error } = await this.sb.rpc("respond_offer", { p_ref: ref, p_accepted: accepted }); if (error) throw new Error(error.message); },
+  async addMessage(ref, text, photos) { const { error } = await this.sb.rpc("add_message", { p_ref: ref, p_text: text, p_photos: photos }); if (error) throw new Error(error.message); },
+  async adminUpdate(ref, patch) {
+    const row = { updated_at: new Date().toISOString() };
+    if ("status" in patch) row.status = patch.status;
+    if ("items" in patch) row.items = patch.items;
+    if ("total" in patch) row.total = patch.total;
+    if ("paidAmount" in patch) row.paid_amount = patch.paidAmount;
+    if ("messages" in patch) row.messages = patch.messages.map(m => ({ ...m, at: new Date(m.at).toISOString() }));
+    const { error } = await this.sb.from("submissions").update(row).eq("ref", ref); if (error) throw new Error(error.message);
+  },
+  async deleteSubmission(ref) { const { error } = await this.sb.from("submissions").delete().eq("ref", ref); if (error) throw new Error(error.message); },
+  async getNote(ref) { const { data } = await this.sb.from("admin_notes").select("note").eq("ref", ref).maybeSingle(); return data?.note || ""; },
+  async saveNote(ref, note) { const { error } = await this.sb.from("admin_notes").upsert({ ref, note }); if (error) throw new Error(error.message); },
+  async getBarcode(code) { const { data } = await this.sb.from("barcodes").select("item, source").eq("code", code).maybeSingle(); return data ? { ...data.item, source: data.source } : null; },
+  async saveBarcode(code, item) { const { error } = await this.sb.from("barcodes").upsert({ code, item, source: "admin", updated_at: new Date().toISOString() }); if (error) throw new Error(error.message); },
+  async getSettings() { const { data } = await this.sb.from("settings").select("value").eq("key", "bulk").maybeSingle(); return data?.value || null; },
+  async saveSettings(v) { const { error } = await this.sb.from("settings").upsert({ key: "bulk", value: v }); if (error) throw new Error(error.message); }
+};
+const API = LIVE ? SupaAPI : LocalAPI;
+let ME = null, OFFERS = 0;
+
+async function refreshMe() {
+  try { ME = await API.me(); } catch { ME = null; }
+  OFFERS = 0;
+  if (ME) { try { OFFERS = (await API.mySubmissions()).filter(s => s.status === "bud_sendt").length; } catch {} }
+  syncBag();
+}
+function syncBag() {
+  const n = draftCount(), bulk = draftBulkTotal(), quotes = DRAFT.items.some(l => l.kind === "quote");
+  document.getElementById("bag-count").textContent = n;
+  document.getElementById("bag-total").textContent = quotes || !bulk ? "Sending" : kr(bulk);
+  document.getElementById("bag").setAttribute("aria-label", `Din sending: ${n} ting`);
+  const dot = document.getElementById("tab-dot"); dot.textContent = n; dot.hidden = n === 0;
+  document.getElementById("tab-offer").hidden = !OFFERS;
+  document.getElementById("acct-link").textContent = ME ? (OFFERS ? `Min konto (${OFFERS} bud)` : "Min konto") : "Logg inn";
+  document.getElementById("admin-link").hidden = !ME?.isAdmin;
+}
+
+/* =============================== Pieces =============================== */
+const icoSearch = `<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>`;
+const chev = `<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>`;
+function sticker(amount, label, cls = "", rot) {
+  return `<span class="sticker ${cls}" ${rot != null ? `style="--rot:${rot}deg"` : ""}><small>${label}</small><span class="amt num">${typeof amount === "number" ? kr(amount) : esc(amount)}</span></span>`;
+}
+function card(i) {
+  return `<article class="card">
+    <a class="card-link" href="#/vare/${i.id}">
+      <div class="thumb t-${i.cat}" aria-hidden="true">${picHTML(i)}${i.hot ? `<span class="hotflag">Ser etter nå</span>` : ""}</div>
+      <div class="card-b"><span class="t">${esc(i.name)}</span><span class="s">${esc(i.system)}, ${esc(i.cat.toLowerCase())}</span></div>
+    </a>
+    <div class="card-b" style="padding-top:0"><a class="btn small ghost full" href="#/vare/${i.id}">Få bud</a></div>
+  </article>`;
+}
+function emptyBox(icon, title, text, cta) { return `<div class="empty"><div class="e" aria-hidden="true">${icon}</div><h3>${title}</h3><p>${text}</p>${cta || ""}</div>`; }
+function search(q, cat, sys) {
+  const n = x => x.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const terms = n(q || "").split(/\s+/).filter(Boolean);
+  return CATALOG.filter(i => terms.every(t => n(`${i.name} ${i.system} ${i.cat} ${i.brand}`).includes(t)) && (!cat || cat === "Alle" || i.cat === cat) && (!sys || sys === "Alle" || i.system === sys));
+}
+function strip(photos) { return photos?.length ? `<div class="strip">${photos.map((p, k) => `<img src="${esc(p)}" alt="Bilde ${k + 1}" data-lb loading="lazy">`).join("")}</div>` : ""; }
+function thumbOf(l) {
+  if (l.kind === "bulk") return `<span class="em t-Kort" aria-hidden="true">🗃️</span>`;
+  if (l.photos?.length) return `<span class="em t-${l.cat}"><img src="${esc(l.photos[0])}" alt=""></span>`;
+  const it = l.catalogId && byId(l.catalogId);
+  return `<span class="em t-${l.cat}" aria-hidden="true">${picHTML({ image: l.image, wiki: it?.wiki, cat: l.cat, icon: it ? it.icon : catIcon(l.cat) })}</span>`;
+}
+const loadingHTML = `<div class="wrap loading">Laster…</div>`;
+function loginNeeded(title, next) {
+  return `<div class="wrap" style="max-width:480px"><div class="page-h" style="text-align:center"><h1>${title}</h1></div>
+    <div style="margin-top:18px">${emptyBox("🔒", "Du må logge inn", "Logg inn for å se dette.", `<a class="btn" href="#/konto?next=${encodeURIComponent(next)}">Logg inn</a>`)}</div></div>`;
+}
+
+
+/* =============================== Bilder, oppslag og strekkodeskanner =============================== */
+// Konsollbilder hentes fra Wikipedia (gratis) og huskes i nettleseren.
+const WIKI = load(K.wiki, {}), WIKI_P = {};
+function wikiImg(t) {
+  if (t in WIKI) return Promise.resolve(WIKI[t]);
+  return WIKI_P[t] ||= (async () => {
+    try {
+      const ctl = new AbortController(); setTimeout(() => ctl.abort(), 6000);
+      const r = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(t)}`, { signal: ctl.signal });
+      if (!r.ok) return null;
+      const d = await r.json(); const u = d?.thumbnail?.source || null;
+      WIKI[t] = u; save(K.wiki, WIKI); return u;
+    } catch { return null; }
+  })();
+}
+function hydrate(root = document) {
+  root.querySelectorAll("img[data-wiki]:not([data-h])").forEach(async im => {
+    im.dataset.h = "1"; const u = await wikiImg(im.dataset.wiki);
+    if (u) { im.src = u; im.hidden = false; }
+  });
+}
+function picHTML(x) {
+  const img = x.image ? `<img class="pic" src="${esc(x.image)}" alt="" loading="lazy">` : x.wiki ? `<img class="pic" data-wiki="${esc(x.wiki)}" alt="" hidden>` : "";
+  return `${img}<span class="emo">${x.icon || catIcon(x.cat)}</span>`;
+}
+document.addEventListener("load", e => { const t = e.target; if (t.tagName === "IMG" && t.classList.contains("pic")) t.parentElement?.classList.add("has-pic"); }, true);
+document.addEventListener("error", e => { const t = e.target; if (t.tagName === "IMG" && (t.classList.contains("pic") || t.classList.contains("refimg"))) { t.hidden = true; t.parentElement?.classList.remove("has-pic"); } }, true);
+
+// Oppslag i spilldatabasen (TheGamesDB/RAWG) og strekkoder (UPCitemdb), via Supabase-funksjonen "lookup".
+function normExt(x) {
+  const cat = x.kind === "console" ? "Konsoll" : x.kind === "accessory" ? "Tilbehør" : "Spill";
+  return { name: x.name, system: x.platform || x.system || "", image: x.image || null, year: x.year || "", cat, upc: x.upc || null, source: x.source || "", icon: catIcon(cat) };
+}
+const Lookup = {
+  mem: new Map(),
+  async call(params) {
+    const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 9000);
+    try {
+      const r = await fetch(LOOKUP_URL + "?" + new URLSearchParams(params), { signal: ctl.signal, headers: { apikey: CONFIG.supabaseAnonKey, Authorization: "Bearer " + CONFIG.supabaseAnonKey } });
+      if (!r.ok) throw new Error("Oppslag feilet (" + r.status + ")");
+      return await r.json();
+    } finally { clearTimeout(t); }
+  },
+  search(q) {
+    q = q.trim().toLowerCase();
+    if (!LOOKUP_URL || q.length < 3) return Promise.resolve([]);
+    if (!this.mem.has(q)) this.mem.set(q, this.call({ q }).then(d => (d.items || []).map(normExt)).catch(() => []));
+    return this.mem.get(q);
+  },
+  async barcode(code) {
+    const known = await API.getBarcode(code).catch(() => null);
+    if (known) return normExt({ ...known, upc: code });
+    if (!LOOKUP_URL) return null;
+    const d = await this.call({ upc: code });
+    return d.item ? normExt({ ...d.item, upc: code }) : null;
+  }
+};
+const sameThing = (a, b) => a.name.toLowerCase().replace(/[^a-z0-9]/g, "") === b.name.toLowerCase().replace(/[^a-z0-9]/g, "") && (a.system || "") === (b.system || "");
+function pickExternal(x) { try { sessionStorage.setItem("rb_pick", JSON.stringify(x)); } catch {} go("#/vare/valgt"); }
+function getPick() { try { return JSON.parse(sessionStorage.getItem("rb_pick") || "null"); } catch { return null; } }
+function pickRow(x, attrs) {
+  return `<button type="button" class="pick" ${attrs}><span class="pi t-${x.cat || "Spill"}">${picHTML(x)}</span><span class="nm">${esc(x.name)}<small>${esc([x.system, x.year].filter(Boolean).join(", "))}</small></span><span class="pr">Velg</span></button>`;
+}
+function extCard(x, k) {
+  return `<article class="card"><button type="button" class="card-link" data-ext="${k}" style="border:0;background:none;text-align:left;width:100%;padding:0;cursor:pointer">
+    <div class="thumb t-${x.cat}" aria-hidden="true">${picHTML(x)}</div>
+    <div class="card-b"><span class="t">${esc(x.name)}</span><span class="s">${esc([x.system, x.year].filter(Boolean).join(", ") || x.cat)}</span></div></button>
+    <div class="card-b" style="padding-top:0"><button type="button" class="btn small ghost full" data-ext="${k}">Få bud</button></div></article>`;
+}
+
+// Strekkoder: EAN-13, EAN-8 og UPC-A (12 siffer gjøres om til 13 så de alltid matcher)
+const canonCode = c => { c = String(c || "").replace(/\D/g, ""); return c.length === 12 ? "0" + c : c; };
+function validCode(c) {
+  if (!/^(\d{8}|\d{13})$/.test(c)) return false;
+  const d = c.split("").map(Number), check = d.pop();
+  const sum = d.reverse().reduce((s, n, i) => s + n * (i % 2 === 0 ? 3 : 1), 0);
+  return (10 - sum % 10) % 10 === check;
+}
+const ZX_URL = "https://cdn.jsdelivr.net/npm/@zxing/browser@0.2.1/umd/zxing-browser.min.js";
+let zxLoad;
+const loadZX = () => window.ZXingBrowser ? Promise.resolve() : (zxLoad ||= loadScript(ZX_URL).catch(e => { zxLoad = null; throw e; }));
+const zxReader = () => new window.ZXingBrowser.BrowserMultiFormatOneDReader(new Map([[3, true]])); // 3 = TRY_HARDER
+const barcodeIcon = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 8v8M10 8v8M13 8v8M17 8v8"/></svg>`;
+
+function openScanner() {
+  if (document.querySelector(".scan")) return;
+  const d = document.createElement("div");
+  d.className = "scan"; d.setAttribute("role", "dialog"); d.setAttribute("aria-modal", "true"); d.setAttribute("aria-label", "Skann strekkode");
+  d.innerHTML = `<div class="scan-box">
+    <div class="scan-h"><h3>Skann strekkoden</h3><button type="button" class="scan-x" data-close aria-label="Lukk">×</button></div>
+    <div class="scan-cam" id="scam"><video playsinline muted autoplay></video><div class="aim"><i></i></div></div>
+    <p class="muted small" id="smsg" aria-live="polite">Starter kameraet…</p>
+    <div id="sres"></div>
+    <div class="btnrow" id="salt">
+      <label class="btn ghost small"><input type="file" accept="image/*" capture="environment" hidden id="sfile" />Ta bilde i stedet</label>
+      <button type="button" class="btn ghost small" id="sman">Skriv inn tallene</button>
+    </div>
+  </div>`;
+  document.body.appendChild(d); document.body.style.overflow = "hidden";
+  const video = d.querySelector("video"), cam = d.querySelector("#scam"), msg = t => { d.querySelector("#smsg").textContent = t; }, res = d.querySelector("#sres");
+  let stream = null, controls = null, stopped = false, busy = false;
+  const stopCam = () => { stopped = true; try { controls?.stop(); } catch {} stream?.getTracks().forEach(t => t.stop()); stream = null; };
+  const close = () => { stopCam(); d.remove(); document.body.style.overflow = ""; document.removeEventListener("keydown", onKey); };
+  const onKey = e => { if (e.key === "Escape") close(); };
+  document.addEventListener("keydown", onKey);
+  d.addEventListener("click", e => { if (e.target === d || e.target.closest("[data-close]")) close(); });
+
+  const detector = async () => {
+    if (!("BarcodeDetector" in window)) return null;
+    try { const f = await window.BarcodeDetector.getSupportedFormats(); if (!f.includes("ean_13")) return null; return new window.BarcodeDetector({ formats: ["ean_13", "ean_8", "upc_a"] }); } catch { return null; }
+  };
+  const startCam = async () => {
+    stopped = false; busy = false; cam.hidden = false; res.innerHTML = "";
+    if (!navigator.mediaDevices?.getUserMedia) { cam.hidden = true; msg("Kameraet er ikke tilgjengelig her. Ta et bilde av strekkoden, eller skriv inn tallene."); return; }
+    try {
+      const det = await detector();
+      if (det) {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 } } });
+        video.srcObject = stream; await video.play();
+        const tick = async () => {
+          if (stopped) return;
+          try { const r = await det.detect(video); const c = r.map(x => canonCode(x.rawValue)).find(validCode); if (c) return found(c); } catch {}
+          setTimeout(tick, 150);
+        };
+        tick();
+      } else {
+        msg("Laster skanneren…"); await loadZX(); if (stopped) return;
+        controls = await zxReader().decodeFromConstraints({ video: { facingMode: { ideal: "environment" } } }, video, r => {
+          if (r && !stopped) { const c = canonCode(r.getText()); if (validCode(c)) found(c); }
+        });
+      }
+      msg("Hold strekkoden på baksiden av esken inne i rammen.");
+    } catch (ex) {
+      cam.hidden = true;
+      msg(ex?.name === "NotAllowedError" ? "Siden fikk ikke bruke kameraet. Ta et bilde av strekkoden i stedet, eller skriv inn tallene." : "Fikk ikke startet kameraet. Ta et bilde av strekkoden i stedet, eller skriv inn tallene.");
+    }
+  };
+  const decodeFile = async file => {
+    stopCam(); busy = false; cam.hidden = true; msg("Leser bildet…"); res.innerHTML = "";
+    const url = URL.createObjectURL(file);
+    try {
+      const img = await new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = url; });
+      const det = await detector();
+      if (det) { try { const c = (await det.detect(img)).map(x => canonCode(x.rawValue)).find(validCode); if (c) return found(c); } catch {} }
+      await loadZX(); const reader = zxReader();
+      for (const [max, rot] of [[1600, 0], [1000, 0], [1600, 90], [2400, 0]]) {
+        const s = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight)), w = Math.round(img.naturalWidth * s), h = Math.round(img.naturalHeight * s);
+        const c = document.createElement("canvas"); c.width = rot ? h : w; c.height = rot ? w : h; const x = c.getContext("2d");
+        if (rot) { x.translate(h, 0); x.rotate(Math.PI / 2); }
+        x.drawImage(img, 0, 0, w, h);
+        try { const code = canonCode(reader.decodeFromCanvas(c).getText()); if (validCode(code)) return found(code); } catch {}
+      }
+      msg("Fant ingen strekkode i bildet. Ta bildet litt nærmere og rett forfra, eller skriv inn tallene.");
+    } catch { msg("Kunne ikke lese bildet. Prøv igjen, eller skriv inn tallene."); }
+    finally { URL.revokeObjectURL(url); }
+  };
+  const found = async code => {
+    if (busy) return; busy = true; stopCam(); cam.hidden = true; navigator.vibrate?.(60);
+    msg(`Fant strekkode ${code}. Slår opp…`);
+    let it = null, failed = false;
+    try { it = await Lookup.barcode(code); } catch { failed = true; }
+    if (it) {
+      msg("Er dette tingen din?");
+      res.innerHTML = `<div class="scan-hit"><span class="pi t-${it.cat}">${picHTML(it)}</span><div><b>${esc(it.name)}</b><div class="muted small">${esc([it.system, it.cat].filter(Boolean).join(", "))}</div></div></div>
+        <div class="btnrow" style="margin-top:12px"><button type="button" class="btn" data-s="use">Ja, velg denne</button><button type="button" class="btn ghost" data-s="again">Nei, skann på nytt</button></div>`;
+      hydrate(res);
+      res.querySelector("[data-s=use]").onclick = () => { close(); pickExternal(it); };
+    } else {
+      msg(failed ? `Koden ${code} er lest, men oppslaget feilet akkurat nå.` : LOOKUP_URL ? `Vi kjenner ikke igjen koden ${code} ennå.` : `Koden ${code} er lest. Oppslag er ikke koblet til i demoen.`);
+      res.innerHTML = `<form class="scan-name" novalidate><label class="field" style="margin:0"><span>Hva heter spillet eller tingen?</span><input class="input" name="n" placeholder="F.eks. Pokémon Crystal" required /></label>
+        <div class="btnrow" style="margin-top:12px"><button class="btn">Fortsett</button><button type="button" class="btn ghost" data-s="again">Skann på nytt</button></div></form>`;
+      const f = res.querySelector("form"); f.n.focus();
+      f.onsubmit = e => { e.preventDefault(); const n = f.n.value.trim(); if (!n) return f.n.focus(); close(); go(`#/vare/ny?${new URLSearchParams({ name: n, upc: code })}`); };
+    }
+    res.querySelector("[data-s=again]").onclick = () => startCam();
+  };
+  d.querySelector("#sfile").addEventListener("change", e => { const f = e.target.files[0]; e.target.value = ""; if (f) decodeFile(f); });
+  d.querySelector("#sman").addEventListener("click", () => {
+    stopCam(); busy = false; cam.hidden = true; msg("Skriv inn tallene under strekkoden.");
+    res.innerHTML = `<form class="scan-name" novalidate><label class="field" style="margin:0"><span>Strekkode</span><input class="input num" name="c" inputmode="numeric" autocomplete="off" placeholder="13 siffer" /></label>
+      <p class="err" hidden></p><div class="btnrow" style="margin-top:12px"><button class="btn">Slå opp</button><button type="button" class="btn ghost" data-s="again">Bruk kameraet</button></div></form>`;
+    const f = res.querySelector("form"); f.c.focus();
+    res.querySelector("[data-s=again]").onclick = () => startCam();
+    f.onsubmit = e => { e.preventDefault(); const c = canonCode(f.c.value); if (!validCode(c)) { const er = f.querySelector(".err"); er.textContent = "Det ser ikke ut som en gyldig strekkode. Sjekk tallene."; er.hidden = false; return; } found(c); };
+  });
+  startCam();
+}
+document.addEventListener("click", e => { if (e.target.closest("[data-scan]")) { e.preventDefault(); openScanner(); } });
+
+/* =============================== Views =============================== */
+const V = {};
+let PAGE = {};
+
+V.home = () => {
+  const hot = CATALOG.filter(i => i.hot).slice(0, 8);
+  return `
+  <section class="hero"><div class="wrap hero-in">
+    <div>
+      <h1>Selg spillene dine. Få bud før du sender.</h1>
+      <p class="lead">Fortell oss hva du har og legg ved noen bilder. Du får et bud innen 24 timer, og sender først når du har sagt ja.</p>
+      <div class="quote">
+        <label for="hq" class="sr">Hva vil du selge?</label>
+        ${icoSearch}
+        <input id="hq" class="input" type="search" autocomplete="off" placeholder="Hva vil du selge? Prøv «sony» eller «zelda»" />
+        <div class="suggest" id="hq-list"></div>
+        <button type="button" class="btn ghost small scan-cta" data-scan>${barcodeIcon} Skann strekkoden på esken</button>
+      </div>
+      <div class="facts">
+        <div><b>24 t</b><span>til du får bud</span></div>
+        <div><b>0 kr</b><span>i frakt</span></div>
+        <div><b>Du</b><span>bestemmer om du selger</span></div>
+      </div>
+    </div>
+    <div class="hero-card ex-offer" aria-label="Eksempel på et bud">
+      <div class="eh"><span>Eksempel på bud</span>${pill("bud_sendt", true)}</div>
+      <div class="row"><span class="em t-Konsoll" aria-hidden="true">🟪</span><div class="nm">Nintendo GameCube<small>Pent brukt, uten eske</small></div><div class="ph3" aria-hidden="true"><i></i><i></i><i></i></div></div>
+      <div class="row"><span class="em t-Spill" aria-hidden="true">💥</span><div class="nm">Super Smash Bros. Melee<small>Komplett med eske og manual</small></div><div class="ph3" aria-hidden="true"><i></i><i></i></div></div>
+      <div class="row"><span class="em t-Tilbehør" aria-hidden="true">🎛️</span><div class="nm">2 GameCube-kontroller<small>Brukt, virker</small></div><div class="ph3" aria-hidden="true"><i></i></div></div>
+      <div class="foot">${sticker("1 350 kr", "Budet ditt", "xl", -3)}<a class="btn" href="#/sok">Få ditt eget bud</a></div>
+    </div>
+  </div></section>
+
+  <section class="sec"><div class="wrap">
+    <div class="sec-h"><h2>Dette ser vi etter nå</h2><a href="#/hot">Hele listen</a></div>
+    <div class="grid">${hot.map(card).join("")}</div>
+  </div></section>
+
+  <section class="sec"><div class="wrap">
+    <div class="sec-h"><h2>Hva har du liggende?</h2></div>
+    <div class="cats">${CATS.filter(c => c.name !== "Annet" && c.name !== "Samling").map(c => `<a class="cat t-${c.name}" href="${c.name === "Kort" ? "#/cards" : `#/sok?cat=${encodeURIComponent(c.name)}`}"><span class="e" aria-hidden="true">${c.icon}</span><div><b>${c.name}</b><span>${c.name === "Kort" ? "Bulk til fast pris" : "Få bud"}</span></div></a>`).join("")}</div>
+  </div></section>
+
+  <section class="sec"><div class="wrap">
+    <div class="sec-h"><h2>Slik selger du</h2><a href="#/info">Spørsmål og svar</a></div>
+    <div class="steps">
+      <div class="step"><h3>Fortell hva du har</h3><p>Velg tingene, beskriv standen og ta noen bilder med mobilen.</p></div>
+      <div class="step"><h3>Få et bud</h3><p>Vi ser på bildene og gir deg et bud, vanligvis innen 24 timer. Du velger hva du vil selge.</p></div>
+      <div class="step"><h3>Send gratis, få betalt</h3><p>Sier du ja, får du fraktetikett. Vi sjekker pakken og betaler til Vipps eller konto.</p></div>
+    </div>
+  </div></section>
+
+  <section class="sec"><div class="wrap pair">
+    <div class="promo a">
+      <h2>Pokémon-kort i bulk?</h2>
+      <p>Kort kjøper vi til fast pris. Tell eller vei kortene, så ser du hva du får med en gang.</p>
+      <a class="btn" href="#/cards">Se kortprisene</a>
+    </div>
+    <div class="promo b">
+      <h2>Har du en hel kasse?</h2>
+      <p>Ta noen bilder av samlingen og skriv kort hva som er med, så får du ett samlet bud.</p>
+      <a class="btn ghost" href="#/vare/ny?cat=Samling">Få bud på samlingen</a>
+    </div>
+  </div></section>`;
+};
+V.home.mount = () => {
+  const inp = document.getElementById("hq"), list = document.getElementById("hq-list");
+  let sel = 0, rows = [], tok = 0, timer;
+  const mark = () => list.querySelectorAll("[data-i]").forEach((b, k) => b.classList.toggle("on", k === sel));
+  const paint = (q, local, remote, loading) => {
+    rows = [...local.map(m => ({ m })), ...remote.map(x => ({ x }))];
+    list.innerHTML = local.map((m, k) => pickRow(m, `data-i="${k}"`)).join("")
+      + (loading || remote.length ? `<div class="sug-h">${loading ? "Søker i spilldatabasen…" : "Fra spilldatabasen"}</div>` : "")
+      + remote.map((x, k) => pickRow(x, `data-i="${local.length + k}"`)).join("")
+      + `<button type="button" class="pick own" data-own><span class="pi">＋</span><span class="nm">Legg til «${esc(q)}» selv</span></button>`;
+    sel = Math.min(sel, Math.max(0, rows.length - 1)); mark(); hydrate(list);
+  };
+  const choose = k => { const r = rows[k]; if (!r) return; if (r.m) go(`#/vare/${r.m.id}`); else pickExternal(r.x); };
+  const draw = () => {
+    const q = inp.value.trim(); clearTimeout(timer);
+    if (!q) { list.innerHTML = ""; rows = []; return; }
+    const local = search(q).slice(0, 5), my = ++tok, remoteOn = !!LOOKUP_URL && q.length >= 3;
+    sel = 0; paint(q, local, [], remoteOn);
+    if (remoteOn) timer = setTimeout(async () => {
+      const rem = (await Lookup.search(q)).filter(x => !local.some(m => sameThing(m, x))).slice(0, 6);
+      if (my === tok) paint(q, local, rem, false);
+    }, 350);
+  };
+  inp.addEventListener("input", draw);
+  inp.addEventListener("keydown", e => {
+    if (e.key === "Enter") { e.preventDefault(); if (rows[sel]) choose(sel); else if (inp.value.trim()) go(`#/vare/ny?name=${encodeURIComponent(inp.value.trim())}`); }
+    if ((e.key === "ArrowDown" || e.key === "ArrowUp") && rows.length) { e.preventDefault(); sel = (sel + (e.key === "ArrowDown" ? 1 : -1) + rows.length) % rows.length; mark(); }
+  });
+  list.addEventListener("click", e => {
+    const b = e.target.closest("[data-i]"); if (b) choose(+b.dataset.i);
+    if (e.target.closest("[data-own]")) go(`#/vare/ny?name=${encodeURIComponent(inp.value.trim())}`);
+  });
+};
+V.sok = (p) => {
+  const q = p.get("q") || "", cat = p.get("cat") || "Alle", sys = p.get("sys") || "Alle";
+  return `<div class="wrap">
+    <div class="page-h" style="padding-bottom:0"><h1>Hva vil du selge?</h1><p>Finn tingen din, eller legg den til selv. Du får et bud før du sender noe.</p></div>
+    <div class="toolbar">
+      <div class="search-in">${icoSearch}<label for="q" class="sr">Søk</label><input id="q" class="input" type="search" autocomplete="off" placeholder="Tittel, merke eller konsoll" value="${esc(q)}" /><button class="clear" id="clr" type="button" aria-label="Tøm søket" ${q ? "" : "hidden"}>×</button></div>
+      <div class="chips" role="group" aria-label="Kategori">${["Alle", ...CATS.filter(c => !["Samling", "Annet"].includes(c.name)).map(c => c.name)].map(c => `<button type="button" class="chip" data-cat="${c}" aria-pressed="${c === cat}">${c}</button>`).join("")}</div>
+      <div class="filters2">
+        <label class="sr" for="sys">Konsoll eller merke</label>
+        <select id="sys" class="select"><option value="Alle">Alle merker</option>${SYSTEMS.map(s => `<option ${s === sys ? "selected" : ""}>${esc(s)}</option>`).join("")}</select>
+        <button type="button" class="btn small ghost" data-scan style="width:auto">${barcodeIcon}<span class="hide-s">&nbsp;Skann</span></button>
+        <a class="btn small ghost" href="#/vare/ny" id="own" style="width:auto">+ Legg til<span class="hide-s">&nbsp;noe annet</span></a>
+        <span class="count" id="count"></span>
+      </div>
+    </div>
+    <div id="results" style="margin-top:8px"></div>
+    <div id="remote"></div>
+  </div>`;
+};
+V.sok.mount = (p) => {
+  const st = { q: p.get("q") || "", cat: p.get("cat") || "Alle", sys: p.get("sys") || "Alle" };
+  const res = document.getElementById("results"), rem = document.getElementById("remote"), cnt = document.getElementById("count"), q = document.getElementById("q"), clr = document.getElementById("clr"), own = document.getElementById("own");
+  let tok = 0, timer, ext = [];
+  const draw = () => {
+    const list = search(st.q, st.cat, st.sys).sort((a, b) => b.hot - a.hot || a.name.localeCompare(b.name, "nb"));
+    cnt.textContent = `${list.length} ${list.length === 1 ? "treff" : "treff"}`;
+    const ownHref = `#/vare/ny?${new URLSearchParams({ ...(st.q ? { name: st.q } : {}), ...(st.cat !== "Alle" && st.cat !== "Kort" ? { cat: st.cat } : {}) })}`;
+    own.href = ownHref;
+    const remoteOn = !!LOOKUP_URL && st.q.trim().length >= 3 && ["Alle", "Spill"].includes(st.cat);
+    const none = emptyBox("📭", "Fant den ikke", `Det gjør ingenting. Legg til ${st.q ? `«${esc(st.q)}»` : "tingen"} selv, så gir vi deg et bud.`, `<div class="btnrow" style="justify-content:center"><a class="btn" href="${ownHref}">Legg til selv</a><button type="button" class="btn ghost" data-scan>${barcodeIcon} Skann strekkoden</button></div>`);
+    res.innerHTML = list.length ? `<div class="grid">${list.map(card).join("")}</div>` : remoteOn ? "" : none;
+    rem.innerHTML = remoteOn ? `<p class="muted" style="margin-top:20px">Søker i spilldatabasen…</p>` : "";
+    hydrate(res);
+    const u = new URLSearchParams(); Object.entries(st).forEach(([k, v]) => { if (v && v !== "Alle") u.set(k, v); });
+    history.replaceState(null, "", "#/sok" + (u.toString() ? "?" + u : ""));
+    clr.hidden = !st.q;
+    clearTimeout(timer); const my = ++tok;
+    if (remoteOn) timer = setTimeout(async () => {
+      ext = (await Lookup.search(st.q)).filter(x => !list.some(m => sameThing(m, x))).filter(x => st.sys === "Alle" || x.system === st.sys);
+      if (my !== tok) return;
+      rem.innerHTML = ext.length ? `<div class="sec-h" style="margin:${list.length ? 32 : 4}px 0 14px"><h2 style="font-size:22px">${list.length ? "Flere treff i spilldatabasen" : "Treff i spilldatabasen"}</h2></div><div class="grid">${ext.map(extCard).join("")}</div>` : "";
+      if (!list.length && !ext.length) res.innerHTML = none;
+      hydrate(rem);
+    }, 350);
+  };
+  rem.addEventListener("click", e => { const b = e.target.closest("[data-ext]"); if (b && ext[+b.dataset.ext]) pickExternal(ext[+b.dataset.ext]); });
+  q.addEventListener("input", () => { st.q = q.value; draw(); });
+  clr.addEventListener("click", () => { q.value = ""; st.q = ""; draw(); q.focus(); });
+  document.querySelectorAll("[data-cat]").forEach(b => b.addEventListener("click", () => {
+    if (b.dataset.cat === "Kort") { go("#/cards"); return; }
+    st.cat = b.dataset.cat; document.querySelectorAll("[data-cat]").forEach(x => x.setAttribute("aria-pressed", x === b)); draw();
+  }));
+  document.getElementById("sys").addEventListener("change", e => { st.sys = e.target.value; draw(); });
+  draw();
+  if (!st.q && matchMedia("(min-width: 861px)").matches) q.focus();
+};
+
+/* ---------- Item editor (add or edit a thing to get a bid on) ---------- */
+function editorHTML(item, line, p, pick) {
+  const src = line || pick || null;
+  const cat = line?.cat || item?.cat || pick?.cat || p.get("cat") || "Spill";
+  const code = src?.upc || p.get("upc") || "";
+  return `<div class="wrap" style="padding-top:20px">
+    <a class="back" href="#/sok" data-back>‹ Tilbake</a>
+    <div class="prod">
+      <div class="thumb t-${cat}" id="ed-thumb" aria-hidden="true">${picHTML(item || { image: src?.image, cat, icon: catIcon(cat) })}</div>
+      <form id="ef" novalidate>
+        ${item ? `<h1>${esc(item.name)}</h1>
+          <div class="tags"><span class="tag">${esc(item.system)}</span><span class="tag">${esc(item.cat)}</span>${item.hot ? `<span class="tag hot">Vi ser etter denne nå</span>` : ""}</div>`
+        : `<h1>${line ? "Endre tingen" : pick ? "Stemmer dette?" : cat === "Samling" ? "Få bud på samlingen" : "Hva vil du selge?"}</h1>
+          ${pick ? `<p class="muted" style="margin-top:6px">Sjekk navn og konsoll, og rett opp om noe er feil.</p>` : ""}
+          ${code ? `<p class="tag" style="display:inline-block;margin-top:10px">Strekkode ${esc(code)}</p>` : ""}
+          <div style="margin-top:18px">
+            <label class="field"><span>Kategori</span><select class="select" name="cat">${CATS.filter(c => c.name !== "Kort" || true).map(c => `<option ${c.name === cat ? "selected" : ""}>${c.name}</option>`).join("")}</select></label>
+            <label class="field" data-hide-samling><span>Hva er det?</span><input class="input" name="name" placeholder="F.eks. Sega Mega Drive eller Pokémon Crystal" value="${esc(src?.name || p.get("name") || "")}" /></label>
+            <label class="field" data-hide-samling><span>Konsoll eller merke <small>(valgfritt)</small></span><input class="input" name="system" placeholder="F.eks. Game Boy, PlayStation, Apple" value="${esc(src?.system || p.get("system") || "")}" /></label>
+          </div>`}
+        <div data-hide-samling>
+          <p class="opt-h" id="cond-h">Hvilken stand er den i?</p>
+          <div class="conds" role="radiogroup" aria-labelledby="cond-h">
+            ${CONDS.map((c, k) => `<label class="cond"><input type="radio" name="cond" value="${c.id}" ${(line ? line.cond === c.id : k === 1) ? "checked" : ""} /><span class="l"><b>${c.name}</b><small>${c.desc}</small></span></label>`).join("")}
+          </div>
+          <div id="comp-wrap"></div>
+        </div>
+        <p class="opt-h">Bilder</p>
+        <p class="muted small" style="margin:-4px 0 10px" id="ph-help"></p>
+        <div id="ph-box"></div>
+        <div data-hide-samling style="margin-top:18px">
+          <span class="opt-h" style="display:block;margin:0 0 8px">Antall</span>
+          <div class="stepper" aria-label="Antall"><button type="button" data-q="-1" aria-label="Færre">−</button><span id="vq" class="num">${line?.qty || 1}</span><button type="button" data-q="1" aria-label="Flere">+</button></div>
+        </div>
+        <label class="field" style="margin-top:18px"><span id="notes-l">Noe vi bør vite? <small>(valgfritt)</small></span><textarea class="textarea" name="notes" placeholder="Riper, feil, hva som følger med, eller om den er testet">${esc(line?.notes || "")}</textarea></label>
+        <p class="err" id="ef-err" hidden></p>
+        <button class="btn full" type="submit">${line ? "Lagre endringene" : "Legg i sending"}</button>
+        <p class="note">Du forplikter deg ikke til noe. Vi gir deg et bud først, og du velger selv om du vil selge.</p>
+      </form>
+    </div>
+  </div>`;
+}
+function editorMount(item, line, p, pick) {
+  const f = document.getElementById("ef"), err = document.getElementById("ef-err");
+  const photos = line ? [...line.photos] : [];
+  let qty = line?.qty || 1;
+  const catNow = () => f.cat ? f.cat.value : item.cat;
+  const maxPh = () => catNow() === "Samling" ? 12 : 6;
+  let phBox = document.getElementById("ph-box");
+  const drawCat = () => {
+    const c = catNow(), opts = COMP[c], samling = c === "Samling";
+    document.getElementById("ed-thumb").className = `thumb t-${c}`;
+    if (!item) { const emo = document.getElementById("ed-thumb").querySelector(".emo"); if (emo) emo.textContent = catIcon(c); }
+    f.querySelectorAll("[data-hide-samling]").forEach(x => x.hidden = samling);
+    const cur = f.querySelector("input[name=comp]:checked")?.value || line?.comp;
+    document.getElementById("comp-wrap").innerHTML = opts ? `<p class="opt-h" id="comp-h">Hva følger med?</p><div class="conds" role="radiogroup" aria-labelledby="comp-h">${opts.map((o, k) => `<label class="cond"><input type="radio" name="comp" value="${esc(o)}" ${(cur ? cur === o : k === 0) ? "checked" : ""} /><span class="l"><b>${esc(o)}</b></span></label>`).join("")}</div>` : "";
+    document.getElementById("ph-help").textContent = samling ? "Ta bilder av hele samlingen, og nærbilder av det mest verdifulle. Opptil 12 bilder." : "Ta bilder av forsiden, baksiden og eventuelle skader. Gode bilder gir et sikrere bud. Opptil 6 bilder.";
+    document.getElementById("notes-l").innerHTML = samling ? "Hva er i samlingen?" : `Noe vi bør vite? <small>(valgfritt)</small>`;
+    f.notes.placeholder = samling ? "F.eks. 40 Switch-spill, to kontroller og en PS2 med ledninger. Det meste er komplett." : "Riper, feil, hva som følger med, eller om den er testet";
+    const fresh = phBox.cloneNode(false); phBox.replaceWith(fresh); phBox = fresh;
+    if (photos.length > maxPh()) photos.length = maxPh();
+    bindPhotos(phBox, photos, maxPh());
+  };
+  f.cat?.addEventListener("change", drawCat);
+  f.querySelectorAll("[data-q]").forEach(b => b.addEventListener("click", () => { qty = Math.max(1, Math.min(99, qty + +b.dataset.q)); document.getElementById("vq").textContent = qty; }));
+  f.addEventListener("submit", e => {
+    e.preventDefault();
+    const c = catNow(), samling = c === "Samling";
+    const name = item ? item.name : samling ? "Samling" : f.name.value.trim();
+    const miss = [];
+    if (!name) miss.push("hva det er");
+    if (samling && !f.notes.value.trim()) miss.push("hva som er i samlingen");
+    if (samling && !photos.length) miss.push("minst ett bilde");
+    if (miss.length) { err.textContent = "Fyll inn " + listJoin(miss) + "."; err.hidden = false; return; }
+    const data = {
+      lid: line?.lid || uid(), kind: "quote", catalogId: item?.id || null, name, cat: c,
+      system: item ? item.system : (samling ? "" : f.system.value.trim()),
+      cond: samling ? null : f.cond.value, comp: samling ? null : (f.querySelector("input[name=comp]:checked")?.value || null),
+      qty: samling ? 1 : qty, notes: f.notes.value.trim(), photos: [...photos],
+      image: line?.image || pick?.image || (item?.wiki ? WIKI[item.wiki] || null : null),
+      upc: line?.upc || pick?.upc || p.get("upc") || null,
+      upcKnown: line ? !!line.upcKnown : !!pick?.upc
+    };
+    if (line) DRAFT.items[DRAFT.items.findIndex(l => l.lid === line.lid)] = data; else DRAFT.items.push(data);
+    saveDraft();
+    toast(line ? "Endringene er lagret" : `${name} er lagt i sendingen`);
+    go("#/sending");
+  });
+  drawCat();
+}
+V.vare = (p, id) => {
+  if (id === "valgt") return editorHTML(null, null, p, getPick());
+  const item = id && id !== "ny" ? byId(id) : null;
+  if (id && id !== "ny" && !item) return `<div class="wrap page-h">${emptyBox("🤔", "Fant ikke tingen", "Den kan ha blitt fjernet fra listen.", `<a class="btn" href="#/vare/ny">Legg den til selv</a>`)}</div>`;
+  return editorHTML(item, null, p);
+};
+V.vare.mount = (p, id) => { if (id === "valgt") return editorMount(null, null, p, getPick()); const item = id && id !== "ny" ? byId(id) : null; if (id && id !== "ny" && !item) return; editorMount(item, null, p); };
+V.rediger = (p, lid) => {
+  const line = DRAFT.items.find(l => l.lid === lid && l.kind === "quote");
+  if (!line) return `<div class="wrap page-h">${emptyBox("🤔", "Fant ikke tingen", "Den er ikke lenger i sendingen.", `<a class="btn" href="#/sending">Til sendingen</a>`)}</div>`;
+  return editorHTML(line.catalogId ? byId(line.catalogId) : null, line, p);
+};
+V.rediger.mount = (p, lid) => { const line = DRAFT.items.find(l => l.lid === lid && l.kind === "quote"); if (line) editorMount(line.catalogId ? byId(line.catalogId) : null, line, p); };
+
+/* ---------- Cards (bulk, fixed price) ---------- */
+function bulkInDraft(id) { return DRAFT.items.filter(l => l.kind === "bulk" && l.bulkId === id).reduce((n, l) => n + l.qty, 0); }
+function bulkTile(b) {
+  const inCart = bulkInDraft(b.id);
+  return `<div class="btile ${b.group === "acc" ? "acc-t" : ""}">
+    <div class="bh"><span class="code" aria-hidden="true">${b.code}</span><div><b>${esc(b.name)}</b><span class="rate">${rateText(b)}</span></div></div>
+    <div class="q">
+      <div class="tot"><small>Totalt</small><span class="num" data-bt="${b.id}">0 kr</span></div>
+      <label class="sr" for="bq-${b.id}">Antall ${esc(b.unitName)}, ${esc(b.name)}</label>
+      <input id="bq-${b.id}" class="input num" type="number" inputmode="numeric" min="0" step="1" placeholder="Antall ${esc(b.unitName)}" data-bq="${b.id}" />
+    </div>
+    <button class="btn small full" type="button" data-badd="${b.id}">+ Legg til<span class="hide-s">&nbsp;i sending</span></button>
+    <p class="incart" data-bin="${b.id}" ${inCart ? "" : "hidden"}>I sendingen: <b class="num">${nf.format(inCart)} ${esc(b.unitName)}</b></p>
+  </div>`;
+}
+const payoutTile = () => `<div class="btile payout"><b>Anslått utbetaling</b><small>Kort i sendingen din nå</small><div class="big num" data-bsum>${kr(draftBulkTotal())}</div><a class="btn small full" href="#/sending">Send inn kort</a></div>`;
+V.cards = () => `<div class="wrap">
+  <div class="cards-head">
+    <div class="page-h"><h1>Cards</h1><p>Pokémon-kort i bulk kjøper vi til fast pris. Tell eller vei kortene, skriv inn antallet og legg dem i sendingen. Frakten er gratis.</p></div>
+    <a class="coll" href="#/vare/ny?cat=Kort"><b>Verdifulle enkeltkort?</b><span>Graderte kort, samlinger eller forseglede bokser: send bilder, så gir vi deg et bud.</span><span class="go">Få bud på kortene</span></a>
+  </div>
+  <section class="sec" style="padding-top:24px"><h2 class="bulk-h">Selg bulken din</h2>
+    <div class="bulk">${BULK.filter(b => b.group === "card").map(bulkTile).join("")}${payoutTile()}</div></section>
+  <section class="sec"><h2 class="bulk-h">Selg TCG-tilbehør</h2>
+    <div class="bulk">${BULK.filter(b => b.group === "acc").map(bulkTile).join("")}${payoutTile()}</div></section>
+  <section class="nope"><h3>Dette tar vi ikke imot</h3><ul>
+    <li>Kort på andre språk enn engelsk</li><li>Kort som ligger i sleeves</li><li>Kort fra World Championship-decks</li><li>Basic energy, bortsett fra i usortert bulk</li></ul></section>
+</div>`;
+V.cards.mount = () => {
+  const main = document.getElementById("main");
+  const tileTotal = inp => { const q = Math.max(0, parseInt(inp.value, 10) || 0); main.querySelector(`[data-bt="${inp.dataset.bq}"]`).textContent = kr(rate(inp.dataset.bq) * q); return q; };
+  const add = id => {
+    const inp = document.getElementById("bq-" + id), b = bulkById(id), q = tileTotal(inp);
+    if (!q) { inp.focus(); toast(`Skriv inn antall ${b.unitName} først`); return; }
+    addBulk(id, q); inp.value = ""; tileTotal(inp);
+    const el = main.querySelector(`[data-bin="${id}"]`); el.hidden = false; el.querySelector("b").textContent = `${nf.format(bulkInDraft(id))} ${b.unitName}`;
+    main.querySelectorAll("[data-bsum]").forEach(x => { x.textContent = kr(draftBulkTotal()); x.classList.remove("pop"); void x.offsetWidth; x.classList.add("pop"); });
+    const bag = document.getElementById("bag"); bag.classList.remove("bump"); void bag.offsetWidth; bag.classList.add("bump");
+    toast(`${nf.format(q)} ${b.unitName} er lagt i sendingen`, "#/sending", "Se sending");
+  };
+  main.addEventListener("input", e => { const i = e.target.closest("[data-bq]"); if (i) tileTotal(i); });
+  main.addEventListener("keydown", e => { const i = e.target.closest("[data-bq]"); if (i && e.key === "Enter") { e.preventDefault(); add(i.dataset.bq); } });
+  main.querySelectorAll("[data-badd]").forEach(btn => btn.addEventListener("click", () => add(btn.dataset.badd)));
+};
+
+V.hot = () => {
+  const groups = {};
+  CATALOG.filter(i => i.hot).forEach(i => (groups[i.system] ||= []).push(i));
+  return `<div class="wrap">
+    <div class="page-h"><h1>Dette ser vi etter</h1><p>Har du noe av dette, er vi ekstra interessert akkurat nå. Send oss bilder, så får du et godt bud.</p></div>
+    <div style="margin-top:18px">
+    ${Object.entries(groups).sort((a, b) => b[1].length - a[1].length).map(([sys, items], k) => `<details class="acc" ${k < 2 ? "open" : ""}>
+      <summary>${esc(sys)}<span class="n">${items.length} ${items.length === 1 ? "ting" : "ting"}</span>${chev}</summary>
+      ${items.map(i => `<div class="hrow"><span class="em t-${i.cat}" aria-hidden="true">${i.icon}</span><a class="nm" href="#/vare/${i.id}">${esc(i.name)}<small>${esc(i.cat)}</small></a><a class="btn small ghost" style="width:auto;padding:0 14px" href="#/vare/${i.id}">Få bud</a></div>`).join("")}
+    </details>`).join("")}
+    </div>
+  </div>`;
+};
+
+/* ---------- Sending (draft → submit) ---------- */
+V.sending = () => {
+  if (!DRAFT.items.length) return `<div class="wrap"><div class="page-h"><h1>Din sending</h1></div><div style="margin-top:18px">${emptyBox("📦", "Sendingen er tom", "Legg til det du vil selge. Du kan samle spill, konsoller og kort i samme forespørsel.", `<div class="btnrow" style="justify-content:center"><a class="btn" href="#/sok">Finn tingen din</a><a class="btn ghost" href="#/cards">Selg kort i bulk</a></div>`)}</div></div>`;
+  const u = ME, pr = ME?.profile || {};
+  const quotes = DRAFT.items.filter(l => l.kind === "quote"), bulks = DRAFT.items.filter(l => l.kind === "bulk");
+  return `<div class="wrap">
+    <div class="page-h"><h1>Din sending</h1><p>${quotes.length ? "Send inn, så gir vi deg et bud innen 24 timer. Du sender ingenting før du har sagt ja." : "Kortene har fast pris. Send inn, så får du fraktetikett."}</p></div>
+    <form class="co" id="co" style="margin-top:18px" novalidate>
+      <div>
+        <div class="lines">
+          ${quotes.length ? `<div class="grp"><div class="grp-h"><h3>Ting du får bud på</h3><span>${quotes.length} ${quotes.length === 1 ? "ting" : "ting"}</span></div>${quotes.map(l => `<div class="qline">
+            ${thumbOf(l)}
+            <div><div class="nm">${esc(l.name)}${l.system ? ` <span class="muted" style="font-weight:500">${esc(l.system)}</span>` : ""}</div>
+              <div class="sub">${lineSummary(l) || esc(l.cat)}</div>
+              ${l.photos.length ? `<div class="sub">${l.photos.length} ${l.photos.length === 1 ? "bilde" : "bilder"}</div>` : `<span class="warn">Ingen bilder. Bilder gir raskere bud.</span>`}
+              <div class="acts"><a href="#/rediger/${l.lid}">${l.photos.length ? "Endre" : "Legg til bilder"}</a><button type="button" data-rm="${l.lid}">Fjern</button></div>
+            </div>
+            <div class="pr"><span class="q">Bud kommer</span></div>
+          </div>`).join("")}</div>` : ""}
+          ${bulks.length ? `<div class="grp"><div class="grp-h"><h3>Kort til fast pris</h3><span>${kr(draftBulkTotal())}</span></div>${bulks.map(l => { const b = bulkById(l.bulkId); return `<div class="qline">
+            ${thumbOf(l)}
+            <div><div class="nm">${esc(l.name)}</div>
+              <div class="opts" style="margin-top:8px"><label class="bq"><input class="input num" type="number" inputmode="numeric" min="1" step="1" value="${l.qty}" data-bqty="${l.lid}" aria-label="Antall ${esc(l.unitName)}" /><span>${esc(l.unitName)}</span></label></div>
+              <div class="acts"><button type="button" data-rm="${l.lid}">Fjern</button></div>
+            </div>
+            <div class="pr num" data-bl="${l.lid}">${kr(rate(l.bulkId) * l.qty)}<small>${rateText(b)}</small></div>
+          </div>`; }).join("")}</div>` : ""}
+        </div>
+        <div class="addmore"><a class="btn small ghost" href="#/sok">+ Legg til flere ting</a><a class="btn small ghost" href="#/cards">+ Legg til kort</a></div>
+        <div class="panel" style="margin-top:16px">
+          <h3 style="margin-bottom:6px">Hvem selger?</h3>
+          <p class="muted small" style="margin-bottom:14px">${u ? `Du er logget inn som ${esc(u.email)}.` : `Du trenger en konto for å sende inn. <a href="#/konto?next=sending" style="color:var(--cobalt);font-weight:600">Logg inn eller opprett konto</a>.`}</p>
+          <div class="row2">
+            <label class="field"><span>Navn</span><input class="input" name="name" autocomplete="name" value="${esc(pr.name || u?.name || "")}" ${u ? "" : "disabled"} /></label>
+            <label class="field"><span>Mobilnummer</span><input class="input" name="phone" type="tel" inputmode="tel" autocomplete="tel" value="${esc(pr.phone || "")}" ${u ? "" : "disabled"} /></label>
+          </div>
+          <label class="field"><span>Adresse</span><input class="input" name="addr" autocomplete="street-address" value="${esc(pr.addr || "")}" ${u ? "" : "disabled"} /><small>Brukes på fraktetiketten når du har godtatt budet.</small></label>
+          <div class="row-zip">
+            <label class="field"><span>Postnr.</span><input class="input" name="zip" inputmode="numeric" maxlength="4" autocomplete="postal-code" value="${esc(pr.zip || "")}" ${u ? "" : "disabled"} /></label>
+            <label class="field"><span>Sted</span><input class="input" name="city" autocomplete="address-level2" value="${esc(pr.city || "")}" ${u ? "" : "disabled"} /></label>
+          </div>
+        </div>
+      </div>
+      <aside class="co-side">
+        <div class="panel">
+          <h3 style="margin-bottom:12px">Hvordan vil du få pengene?</h3>
+          <div class="pay">${PAYOUTS.map((o, k) => `<label class="cond"><input type="radio" name="pay" value="${o.id}" ${k === 0 ? "checked" : ""} /><span class="l"><b>${o.name}</b><small>${o.desc}</small></span></label>`).join("")}</div>
+          <div data-acct hidden style="margin-top:12px"><label class="field"><span>Kontonummer</span><input class="input" name="acct" inputmode="numeric" placeholder="1234 56 78901" /></label></div>
+          <div class="sum" style="margin-top:18px">
+            ${quotes.length ? `<div><span>${quotes.length} ${quotes.length === 1 ? "ting" : "ting"} til vurdering</span><span>Bud innen 24 t</span></div>` : ""}
+            ${bulks.length ? `<div><span>Kort, fast pris</span><span class="num" id="bulk-sum">${kr(draftBulkTotal())}</span></div>` : ""}
+            <div><span>Frakt</span><span>Gratis</span></div>
+          </div>
+          <label class="check"><input type="checkbox" name="terms" /><span>Jeg eier tingene og godtar <a href="#/vilkar" style="color:var(--cobalt)">vilkårene</a>.</span></label>
+          <p class="err" id="co-err" hidden></p>
+          ${u ? `<button class="btn full" type="submit" id="co-btn">${quotes.length ? "Send inn og få bud" : "Send inn kortene"}</button>` : `<a class="btn full" href="#/konto?next=sending">Logg inn for å sende inn</a>`}
+          <p class="fine">${quotes.length ? "Du forplikter deg ikke til noe før du har godtatt budet." : "Du betaler ingenting. Frakten er gratis."}</p>
+        </div>
+      </aside>
+    </form>
+  </div>`;
+};
+V.sending.mount = () => {
+  const f = document.getElementById("co"); if (!f) return;
+  const err = document.getElementById("co-err");
+  f.addEventListener("click", e => {
+    const rm = e.target.closest("[data-rm]"); if (!rm) return;
+    const l = DRAFT.items.find(x => x.lid === rm.dataset.rm);
+    DRAFT.items = DRAFT.items.filter(x => x.lid !== rm.dataset.rm); saveDraft(); render();
+    if (l) toast(`${l.name} er fjernet`);
+  });
+  f.addEventListener("change", e => {
+    if (e.target.name === "pay") f.querySelector("[data-acct]").hidden = f.pay.value !== "bank";
+    const q = e.target.closest("[data-bqty]"); if (!q) return;
+    const l = DRAFT.items.find(x => x.lid === q.dataset.bqty); l.qty = Math.max(1, Math.min(1000000, parseInt(q.value, 10) || 1)); q.value = l.qty; saveDraft();
+    f.querySelector(`[data-bl="${l.lid}"]`).firstChild.textContent = kr(rate(l.bulkId) * l.qty);
+    const bs = document.getElementById("bulk-sum"); if (bs) bs.textContent = kr(draftBulkTotal());
+  });
+  f.addEventListener("submit", async e => {
+    e.preventDefault();
+    if (!ME) { go("#/konto?next=sending"); return; }
+    const miss = [];
+    if (!f.name.value.trim()) miss.push("navn");
+    if (!/^[\d\s+]{8,}$/.test(f.phone.value.trim())) miss.push("mobilnummer");
+    if (!f.addr.value.trim()) miss.push("adresse");
+    if (!/^\d{4}$/.test(f.zip.value.trim())) miss.push("postnummer");
+    if (!f.city.value.trim()) miss.push("sted");
+    if (f.pay.value === "bank" && f.acct.value.replace(/\D/g, "").length !== 11) miss.push("kontonummer med 11 siffer");
+    if (miss.length) { err.textContent = "Fyll inn " + listJoin(miss) + "."; err.hidden = false; return; }
+    if (!f.terms.checked) { err.textContent = "Bekreft at du eier tingene og godtar vilkårene."; err.hidden = false; return; }
+    err.hidden = true;
+    const btn = document.getElementById("co-btn"); btn.disabled = true;
+    const ship = { name: f.name.value.trim(), phone: f.phone.value.trim(), addr: f.addr.value.trim(), zip: f.zip.value.trim(), city: f.city.value.trim() };
+    const payout = { method: f.pay.value, acct: f.pay.value === "bank" ? f.acct.value.replace(/\D/g, "") : "" };
+    const backup = JSON.parse(JSON.stringify(DRAFT));
+    try {
+      const total = DRAFT.items.reduce((n, l) => n + (l.photos?.length || 0), 0); let done = 0;
+      const items = [];
+      for (const l of DRAFT.items) {
+        if (l.kind === "bulk") { items.push({ lid: l.lid, kind: "bulk", bulkId: l.bulkId, name: l.name, unitName: l.unitName, qty: l.qty }); continue; }
+        const urls = [];
+        for (const ph of l.photos) { btn.textContent = `Laster opp bilder ${++done} av ${total}…`; urls.push(await API.uploadPhoto(ph)); }
+        items.push({ ...l, photos: urls });
+      }
+      btn.textContent = "Sender inn…";
+      if (!LIVE) drop(K.draft);
+      const ref = await API.createSubmission({ items, ship, payout });
+      try { await API.saveProfile(ship); } catch {}
+      DRAFT = { items: [] }; saveDraft(); await refreshMe();
+      go(`#/ordre/${ref}`);
+    } catch (ex) {
+      DRAFT = backup; saveDraft();
+      err.textContent = ex.message || "Noe gikk galt. Prøv igjen."; err.hidden = false;
+      btn.disabled = false; btn.textContent = DRAFT.items.some(l => l.kind === "quote") ? "Send inn og få bud" : "Send inn kortene";
+    }
+  });
+};
+
+/* ---------- Account ---------- */
+V.konto = async (p) => {
+  const next = p.get("next");
+  if (!ME) return `<div class="wrap" style="max-width:480px">
+    <div class="page-h" style="text-align:center"><h1>${next ? "Logg inn for å fortsette" : "Logg inn"}</h1><p style="margin-inline:auto">Med konto ser du budene dine og kan følge sendingene.</p></div>
+    <div class="panel" style="margin-top:18px">
+      <div class="tabs" role="tablist"><button type="button" role="tab" data-t="in" aria-selected="true">Logg inn</button><button type="button" role="tab" data-t="new" aria-selected="false">Ny konto</button></div>
+      <form id="lf" novalidate>
+        <label class="field" data-new hidden><span>Navn</span><input class="input" name="name" autocomplete="name" /></label>
+        <label class="field"><span>E-post</span><input class="input" name="email" type="email" autocomplete="email" required /></label>
+        <label class="field"><span>Passord</span><input class="input" name="pass" type="password" autocomplete="current-password" required minlength="6" /><small data-new hidden>Minst 6 tegn.</small></label>
+        <p class="err" id="lf-err" hidden></p>
+        <button class="btn full" type="submit" id="lf-btn">Logg inn</button>
+      </form>
+      ${LIVE ? "" : `<div class="demo-bar">Demo: kontoer og forespørsler lagres bare i denne nettleseren. <button class="linkbtn" id="demo-admin" type="button">Prøv admin-panelet</button></div>`}
+    </div>
+  </div>`;
+  const subs = await API.mySubmissions();
+  PAGE = { subs };
+  const open = subs.filter(s => s.status === "bud_sendt");
+  return `<div class="wrap">
+    <div class="page-h"><h1>Hei, ${esc((ME.profile?.name || ME.name).split(" ")[0])}</h1><p>${esc(ME.email)}</p></div>
+    ${open.length ? `<div class="panel offer" style="margin-top:18px"><h2 style="font-size:22px">Du har ${open.length === 1 ? "et bud" : `${open.length} bud`} som venter på svar</h2><p class="muted" style="margin:6px 0 14px">Se budet og velg hva du vil selge.</p><div class="btnrow">${open.map(s => `<a class="btn" href="#/ordre/${s.ref}">Se budet på ${s.ref}</a>`).join("")}</div></div>` : ""}
+    <div class="two" style="margin-top:18px">
+      <div>
+        <div class="sec-h"><h2 style="font-size:24px">Forespørsler og sendinger</h2></div>
+        ${subs.length ? `<div class="orders">${subs.map(s => `<a class="order-row ${s.status === "bud_sendt" ? "hl" : ""}" href="#/ordre/${s.ref}"><div><div class="id">${s.ref}</div><div class="d">${fmtDate(s.createdAt)}, ${s.items.length} ${s.items.length === 1 ? "ting" : "ting"}</div></div>${pill(s.status, true)}<div class="amt num">${["venter_bud"].includes(s.status) ? "" : kr(s.paidAmount ?? s.total)}</div></a>`).join("")}</div>`
+          : emptyBox("📦", "Ingen forespørsler ennå", "Når du sender inn noe, ser du budet og statusen her.", `<a class="btn" href="#/sok">Finn noe å selge</a>`)}
+      </div>
+      <div class="panel">
+        <h3 style="margin-bottom:12px">Kontoen din</h3>
+        <dl class="kv"><dt>Navn</dt><dd>${esc(ME.profile?.name || ME.name)}</dd><dt>E-post</dt><dd>${esc(ME.email)}</dd>${ME.profile?.addr ? `<dt>Adresse</dt><dd>${esc(ME.profile.addr)}, ${esc(ME.profile.zip)} ${esc(ME.profile.city)}</dd>` : ""}</dl>
+        <div class="btnrow" style="margin-top:18px">${ME.isAdmin ? `<a class="btn small" href="#/admin">Åpne admin</a>` : ""}<button class="btn ghost small" id="logout">Logg ut</button></div>
+      </div>
+    </div>
+  </div>`;
+};
+V.konto.async = true;
+V.konto.mount = (p) => {
+  document.getElementById("logout")?.addEventListener("click", async () => { await API.signOut(); await refreshMe(); toast("Du er logget ut"); render(); });
+  document.getElementById("demo-admin")?.addEventListener("click", async () => {
+    const us = load(K.users, {});
+    if (!us[CONFIG.demoAdminEmail]) { us[CONFIG.demoAdminEmail] = { name: "Admin", pass: await sha("demo1234"), profile: { name: "Admin" } }; save(K.users, us); }
+    save(K.session, CONFIG.demoAdminEmail); await refreshMe(); go("#/admin");
+  });
+  const f = document.getElementById("lf"); if (!f) return;
+  let mode = "in"; const err = document.getElementById("lf-err"), btn = document.getElementById("lf-btn");
+  document.querySelectorAll("[data-t]").forEach(b => b.addEventListener("click", () => {
+    mode = b.dataset.t; document.querySelectorAll("[data-t]").forEach(x => x.setAttribute("aria-selected", x === b));
+    f.querySelectorAll("[data-new]").forEach(x => x.hidden = mode !== "new");
+    btn.textContent = mode === "new" ? "Opprett konto" : "Logg inn";
+    f.pass.autocomplete = mode === "new" ? "new-password" : "current-password"; err.hidden = true;
+  }));
+  f.addEventListener("submit", async e => {
+    e.preventDefault();
+    const email = f.email.value.trim().toLowerCase(), pass = f.pass.value;
+    const fail = m => { err.textContent = m; err.hidden = false; };
+    if (!/^\S+@\S+\.\S+$/.test(email)) return fail("Skriv inn en gyldig e-postadresse.");
+    if (pass.length < 6) return fail("Passordet må ha minst 6 tegn.");
+    if (mode === "new" && !f.name.value.trim()) return fail("Skriv inn navnet ditt.");
+    btn.disabled = true;
+    try {
+      if (mode === "new") await API.signUp(email, pass, f.name.value.trim()); else await API.signIn(email, pass);
+      await refreshMe();
+      toast(mode === "new" ? "Kontoen er opprettet" : "Du er logget inn");
+      const next = p.get("next");
+      go(next === "sending" ? "#/sending" : next ? decodeURIComponent(next) : ME?.isAdmin ? "#/admin" : "#/konto");
+    } catch (ex) { fail(ex.message); btn.disabled = false; }
+  });
+};
+
+/* ---------- Submission (customer view) ---------- */
+const STEPS = ["Sendt inn", "Bud klart", "Godtatt", "Mottatt", "Utbetalt"];
+const STEP_OF = { venter_bud: 0, bud_sendt: 1, godtatt: 2, mottatt: 3, utbetalt: 5 };
+function timeline(s) {
+  if (s.status === "avslatt" || s.status === "kansellert") return `<p class="muted">${STATUS[s.status].mine}.</p>`;
+  const idx = STEP_OF[s.status] ?? 0;
+  return `<ol class="timeline">${STEPS.map((t, k) => `<li class="${k < idx ? "done" : k === idx ? "now" : ""}"><div><b>${t}</b></div></li>`).join("")}</ol>`;
+}
+function itemRows(s, opts = {}) {
+  return s.items.map(i => `<div class="qline" style="padding:14px 0">
+    ${thumbOf(i)}
+    <div><div class="nm">${esc(i.name)}${i.system ? ` <span class="muted" style="font-weight:500">${esc(i.system)}</span>` : ""}</div>
+      <div class="sub">${lineSummary(i)}</div>
+      ${i.notes ? `<div class="sub" style="margin-top:4px;white-space:pre-wrap">${esc(i.notes)}</div>` : ""}
+      ${strip(i.photos)}
+      ${i.adminNote && opts.showPrice ? `<div class="admin-note"><b>Fra RaskBud</b>${esc(i.adminNote)}</div>` : ""}
+      ${opts.showPrice && i.accepted != null ? `<span class="sold ${i.accepted ? "" : "kept"}">${i.accepted ? "Solgt" : "Beholdes"}</span>` : ""}
+    </div>
+    <div class="pr num">${opts.showPrice && i.price != null ? kr(Number(i.price)) : i.kind === "bulk" ? kr(Number(i.price)) : `<span class="q">Bud kommer</span>`}</div>
+  </div>`).join("");
+}
+function messagesPanel(s, who) {
+  const closed = s.status === "kansellert";
+  return `<div class="panel">
+    <h3 style="margin-bottom:12px">Meldinger</h3>
+    <div class="msgs" id="msgs">${s.messages.map(m => `<div class="msg ${m.by}">${m.by === "system" ? "" : `<div class="who">${m.by === "admin" ? "RaskBud" : who === "admin" ? esc(s.name) : "Deg"}, ${fmtTime(m.at)}</div>`}${m.text ? `<p>${esc(m.text)}</p>` : ""}${strip(m.photos)}${m.by === "system" ? ` <span>${fmtTime(m.at)}</span>` : ""}</div>`).join("")}</div>
+    ${closed ? "" : `<form class="msgform" id="mf" novalidate>
+      <label class="sr" for="mtext">Skriv en melding</label>
+      <textarea class="textarea" id="mtext" placeholder="${who === "admin" ? "Svar kunden, eller be om flere bilder" : "Spørsmål, eller flere bilder vi har bedt om?"}"></textarea>
+      <div id="mph"></div>
+      <button class="btn small" type="submit" id="mbtn">Send melding</button>
+    </form>`}
+  </div>`;
+}
+function bindMessages(s) {
+  const f = document.getElementById("mf"); if (!f) return;
+  const photos = []; bindPhotos(document.getElementById("mph"), photos, 6);
+  const m = document.getElementById("msgs"); m.scrollTop = m.scrollHeight;
+  f.addEventListener("submit", async e => {
+    e.preventDefault();
+    const text = document.getElementById("mtext").value.trim();
+    if (!text && !photos.length) { toast("Skriv en melding eller legg ved et bilde."); return; }
+    const btn = document.getElementById("mbtn"); btn.disabled = true; btn.textContent = "Sender…";
+    try { const urls = []; for (const p of photos) urls.push(await API.uploadPhoto(p)); await API.addMessage(s.ref, text, urls); toast("Meldingen er sendt"); render(); }
+    catch (ex) { toast(ex.message); btn.disabled = false; btn.textContent = "Send melding"; }
+  });
+}
+function shippingLabel(s) {
+  let h = 7, bars = "";
+  for (let k = 0; k < 46; k++) { h = (h * 131 + s.ref.charCodeAt(k % s.ref.length) + k) % 9973; bars += `<i style="width:${1 + (h % 4)}px;margin-right:${1 + ((h >> 3) % 3)}px"></i>`; }
+  return `<div class="label" aria-label="Adresselapp">
+    <div class="lh">RaskBud<span>Forhåndsbetalt</span></div>
+    <div class="cols"><div><div class="k">Fra</div>${esc(s.ship.name)}<br>${esc(s.ship.addr)}<br>${esc(s.ship.zip)} ${esc(s.ship.city)}</div><div><div class="k">Til</div>${CONFIG.receiver.map(esc).join("<br>")}</div></div>
+    <div class="bars" aria-hidden="true">${bars}</div><div class="code">${s.ref}</div></div>`;
+}
+V.ordre = async (p, ref) => {
+  if (!ME) return loginNeeded("Forespørsel", `#/ordre/${ref}`);
+  const s = await API.getSubmission(ref);
+  if (!s) return `<div class="wrap page-h">${emptyBox("🔎", "Fant ikke forespørselen", "Den finnes ikke, eller hører til en annen konto.", `<a class="btn" href="#/konto">Til kontoen din</a>`)}</div>`;
+  PAGE = { s };
+  const pay = PAYOUTS.find(x => x.id === s.payout.method)?.name || "";
+  const heads = { venter_bud: "Vi ser på tingene dine", bud_sendt: "Budet ditt er klart", godtatt: "Pakk og send", mottatt: "Vi har fått pakken", utbetalt: "Pengene er sendt", avslatt: "Du takket nei", kansellert: "Forespørselen er kansellert" };
+  let main = "";
+  if (s.status === "bud_sendt") {
+    main = `<div class="panel offer"><h2 style="font-size:24px">Velg hva du vil selge</h2><p class="muted" style="margin:4px 0 8px">Fjern haken på ting du vil beholde. Du sender bare det du selger.</p>
+      <form id="of">${s.items.map(i => { const zero = !(Number(i.price) > 0); return `<label class="oline ${zero ? "no" : ""}">
+        <input type="checkbox" name="acc" value="${i.lid}" ${zero ? "disabled" : "checked"} />
+        <div><b>${esc(i.name)}</b><div class="sub muted small">${lineSummary(i)}</div>${i.adminNote ? `<div class="admin-note"><b>Fra RaskBud</b>${esc(i.adminNote)}</div>` : ""}</div>
+        <span class="p num">${zero ? "Kjøper ikke" : kr(Number(i.price))}</span></label>`; }).join("")}
+        <div class="offer-tot"><span>Du får</span><b class="num" id="otot"></b></div>
+        <div class="btnrow"><button class="btn" type="submit" id="obtn">Godta budet</button><button class="btn ghost" type="button" id="odecl">Takk nei til alt</button></div>
+      </form></div>`;
+  } else if (s.status === "godtatt") {
+    main = `<div class="panel"><h2 style="font-size:22px;margin-bottom:6px">Slik sender du</h2>
+      <ol class="checklist" style="margin:14px 0 18px"><li><div><b>Pakk godt</b><span>Bruk en solid eske og fyll tomrommet, så ingenting rister.</span></div></li>
+      <li><div><b>Legg ved referansen</b><span>Skriv ${s.ref} på en lapp i pakken.</span></div></li>
+      <li><div><b>Lever pakken</b><span>Vi sender deg fraktetiketten på e-post innen én virkedag. Lever pakken på et Posten-punkt.</span></div></li></ol>
+      ${shippingLabel(s)}</div>
+      <div class="panel" style="margin-top:16px"><h3>Dette skal i pakken</h3>${itemRows({ ...s, items: s.items.filter(included) }, { showPrice: true })}
+      <div class="offer-tot" style="margin-bottom:0"><span>Du får</span><b class="num">${kr(s.total)}</b></div></div>`;
+  } else {
+    const intro = { venter_bud: "Du får et bud her, vanligvis innen 24 timer. Trenger vi flere bilder eller mer informasjon, skriver vi til deg under Meldinger.",
+      mottatt: "Vi sjekker at alt stemmer med beskrivelsen. Stemmer noe ikke, får du et nytt bud før vi betaler.",
+      utbetalt: `Vi har betalt ${kr(s.paidAmount ?? s.total)} til ${pay}. Takk for handelen!`,
+      avslatt: "Du takket nei til budet, så du skal ikke sende noe. Du er velkommen tilbake når som helst.",
+      kansellert: "Forespørselen er kansellert. Ta kontakt hvis du lurer på noe." }[s.status];
+    main = `<div class="panel"><p style="margin-bottom:8px">${intro}</p>${itemRows(s, { showPrice: s.status !== "venter_bud" })}
+      ${s.status !== "venter_bud" ? `<div class="offer-tot" style="margin-bottom:0"><span>${s.status === "utbetalt" ? "Utbetalt" : "Totalt"}</span><b class="num">${kr(s.paidAmount ?? s.total)}</b></div>` : ""}</div>`;
+  }
+  return `<div class="wrap">
+    <div class="page-h"><a class="back" href="#/konto">‹ Kontoen din</a><h1>${heads[s.status]}</h1><p>${s.ref}, sendt inn ${fmtDate(s.createdAt)} ${pill(s.status, true)}</p></div>
+    <div class="two" style="margin-top:18px">
+      <div>${main}</div>
+      <div class="stack"><div class="panel"><h3 style="margin-bottom:14px">Status</h3>${timeline(s)}<p class="fine" style="margin-top:0">Utbetaling til ${esc(pay)}.</p></div>${messagesPanel(s, "kunde")}</div>
+    </div>
+  </div>`;
+};
+V.ordre.async = true;
+V.ordre.mount = () => {
+  const s = PAGE.s; if (!s) return;
+  bindMessages(s);
+  const f = document.getElementById("of"); if (!f) return;
+  const tot = () => { const acc = [...f.querySelectorAll("input[name=acc]:checked")].map(x => x.value); const t = s.items.filter(i => acc.includes(i.lid)).reduce((a, i) => a + Number(i.price), 0);
+    document.getElementById("otot").textContent = kr(t); document.getElementById("obtn").textContent = acc.length ? `Godta budet på ${kr(t)}` : "Velg minst én ting"; document.getElementById("obtn").disabled = !acc.length; return acc; };
+  f.addEventListener("change", tot); tot();
+  const respond = async acc => {
+    try { await API.respondOffer(s.ref, acc); await refreshMe(); toast(acc.length ? "Budet er godtatt" : "Du har takket nei"); render(); window.scrollTo(0, 0); }
+    catch (ex) { toast(ex.message); }
+  };
+  f.addEventListener("submit", e => { e.preventDefault(); respond(tot()); });
+  document.getElementById("odecl").addEventListener("click", () => { if (confirm("Takke nei til hele budet? Da skal du ikke sende noe.")) respond([]); });
+};
+
+/* ---------- Admin ---------- */
+function adminGate() {
+  if (!ME) return loginNeeded("Admin", "#/admin");
+  if (!ME.isAdmin) return `<div class="wrap page-h">${emptyBox("🔒", "Bare for admin", "Denne kontoen har ikke tilgang til admin-panelet.", `<a class="btn" href="#/">Til forsiden</a>`)}</div>`;
+  return null;
+}
+const demoNote = () => LIVE ? "" : `<div class="demo-bar">Demo-modus: alt lagres i denne nettleseren. For ekte kunder må siden kobles til Supabase (se LES-MEG.md).</div>`;
+V.admin = async (p, ref) => {
+  const g = adminGate(); if (g) return g;
+  if (ref) return adminDetail(ref);
+  if (p.get("tab") === "priser") return adminPrices();
+  const all = await API.allSubmissions();
+  const f = p.get("f") || "aktive", q = (p.get("q") || "").toLowerCase();
+  const count = st => all.filter(s => s.status === st).length;
+  const month = new Date(); month.setDate(1); month.setHours(0, 0, 0, 0);
+  const paidMonth = all.filter(s => s.status === "utbetalt" && s.updatedAt >= month.getTime()).reduce((t, s) => t + Number(s.paidAmount ?? s.total), 0);
+  const active = ["venter_bud", "bud_sendt", "godtatt", "mottatt"];
+  let list = f === "aktive" ? all.filter(s => active.includes(s.status)) : f === "alle" ? all : all.filter(s => s.status === f);
+  if (q) list = list.filter(s => `${s.ref} ${s.name} ${s.email} ${s.items.map(i => i.name).join(" ")}`.toLowerCase().includes(q));
+  const order = { venter_bud: 0, mottatt: 1, godtatt: 2, bud_sendt: 3 };
+  list.sort((a, b) => (order[a.status] ?? 9) - (order[b.status] ?? 9) || (a.status === "venter_bud" ? a.createdAt - b.createdAt : b.updatedAt - a.updatedAt));
+  const stat = (id, n, label, urgent) => `<button class="stat ${urgent && n ? "urgent" : ""}" data-f="${id}" aria-pressed="${f === id}"><b class="num">${n}</b><span>${label}</span></button>`;
+  PAGE = { f, q };
+  return `<div class="wrap">
+    <div class="page-h"><h1>Admin</h1><p>Gi bud, følg sendinger og betal ut.</p>${demoNote()}</div>
+    <div class="btnrow" style="margin-top:14px;flex-wrap:wrap"><a class="btn small ink" style="flex:none" href="#/admin" aria-current="page">Forespørsler</a><a class="btn small ghost" style="flex:none" href="#/admin?tab=priser">Kortpriser</a></div>
+    <div class="stats">
+      ${stat("venter_bud", count("venter_bud"), "Trenger bud", true)}
+      ${stat("bud_sendt", count("bud_sendt"), "Venter på kunden")}
+      ${stat("godtatt", count("godtatt"), "Skal sendes til deg")}
+      ${stat("mottatt", count("mottatt"), "Mottatt, må betales", true)}
+      <div class="stat" style="cursor:default"><b class="num">${kr(paidMonth)}</b><span>Utbetalt denne måneden</span></div>
+    </div>
+    <div class="filters2" style="margin-top:0">
+      <div class="chips" style="margin:0;flex:1">${[["aktive", "Aktive"], ["alle", "Alle"], ["utbetalt", "Utbetalt"], ["avslatt", "Avslått"], ["kansellert", "Kansellert"]].map(([id, l]) => `<button class="chip" data-f="${id}" aria-pressed="${f === id}">${l}</button>`).join("")}</div>
+    </div>
+    <div class="search-in" style="margin-top:10px">${icoSearch}<label class="sr" for="aq">Søk</label><input id="aq" class="input" type="search" placeholder="Søk på referanse, navn, e-post eller ting" value="${esc(q)}" /></div>
+    <div class="adm-list">${list.length ? list.map(s => {
+      const photos = s.items.reduce((n, i) => n + (i.photos?.length || 0), 0);
+      return `<a class="adm-row" href="#/admin/${s.ref}"><span class="ref">${s.ref}</span><span class="who"><b>${esc(s.name)}</b><span>${esc(s.email)}</span></span><span class="what">${s.items.length} ${s.items.length === 1 ? "ting" : "ting"}${photos ? `, ${photos} bilder` : ""}<br>${fmtDate(s.createdAt)}</span>${pill(s.status)}<span class="amt num">${s.status === "venter_bud" ? "" : kr(s.paidAmount ?? s.total)}</span></a>`;
+    }).join("") : emptyBox("✅", "Ingenting her", f === "aktive" ? "Ingen aktive forespørsler akkurat nå." : "Ingen forespørsler matcher.", "")}</div>
+  </div>`;
+};
+V.admin.async = true;
+V.admin.mount = (p, ref) => {
+  if (!ME?.isAdmin) return;
+  if (ref) return adminDetailMount();
+  if (p.get("tab") === "priser") return adminPricesMount();
+  const setP = (k, v) => { const u = new URLSearchParams(location.hash.split("?")[1] || ""); if (v) u.set(k, v); else u.delete(k); go("#/admin" + (u.toString() ? "?" + u : "")); };
+  document.querySelectorAll("[data-f]").forEach(b => b.addEventListener("click", () => setP("f", b.dataset.f === "aktive" ? "" : b.dataset.f)));
+  let t; document.getElementById("aq").addEventListener("input", e => { clearTimeout(t); t = setTimeout(() => { setP("q", e.target.value.trim()); }, 350); });
+  if (PAGE.q) { const a = document.getElementById("aq"); a.focus(); a.setSelectionRange(a.value.length, a.value.length); }
+};
+async function adminDetail(ref) {
+  const s = await API.getSubmission(ref);
+  if (!s) return `<div class="wrap page-h">${emptyBox("🔎", "Fant ikke forespørselen", "", `<a class="btn" href="#/admin">Til oversikten</a>`)}</div>`;
+  const note = await API.getNote(ref);
+  PAGE = { s };
+  const pay = PAYOUTS.find(x => x.id === s.payout.method)?.name || "";
+  const canPrice = ["venter_bud", "bud_sendt", "mottatt"].includes(s.status);
+  const priceBtn = { venter_bud: "Send bud til kunden", bud_sendt: "Oppdater budet", mottatt: "Send justert bud" }[s.status];
+  return `<div class="wrap">
+    <div class="page-h"><a class="back" href="#/admin">‹ Alle forespørsler</a><h1>${s.ref}</h1><p>${esc(s.name)}, sendt inn ${fmtTime(s.createdAt)} ${pill(s.status)}</p></div>
+    <div class="two" style="margin-top:18px">
+      <div class="stack">
+        <form class="panel" id="pf" novalidate>
+          <h3 style="margin-bottom:4px">Ting i forespørselen</h3>
+          <p class="muted small" style="margin-bottom:10px">${canPrice ? "Sett pris per linje (hele linjen, ikke per stk). Pris 0 betyr at du ikke kjøper den." : "Budet er låst i denne statusen."}</p>
+          ${s.items.map(i => `<div class="aitem">
+            <div class="hd"><b>${esc(i.name)}${i.qty > 1 && i.kind !== "bulk" ? ` × ${i.qty}` : ""}</b>${i.accepted != null ? `<span class="sold ${i.accepted ? "" : "kept"}">${i.accepted ? "Kunden selger" : "Kunden beholder"}</span>` : ""}</div>
+            <div class="sub muted small">${i.kind === "bulk" ? `Pokémon-kort, fast pris ${kr(Number(i.price) / Math.max(1, i.qty))} per ${i.unitName === "kort" ? "kort" : "stk"}` : [i.cat, i.system].filter(Boolean).map(esc).join(", ")}</div>
+            <div class="sub small" style="margin-top:2px">${lineSummary(i)}</div>
+            ${i.image || i.upc ? `<div class="refrow">${i.image ? `<img class="refimg" src="${esc(i.image)}" alt="Bilde fra databasen" data-lb>` : ""}<div class="small muted">${i.image ? "Bildet er fra spilldatabasen, ikke kundens eget." : ""}${i.upc ? `<div>Strekkode <b class="num">${esc(i.upc)}</b>${i.upcKnown ? " (gjenkjent automatisk)" : ` <button type="button" class="linkbtn" data-link="${i.lid}">Lær koden: lagre den som «${esc(i.name)}»</button>`}</div>` : ""}</div></div>` : ""}
+            ${i.notes ? `<div class="cnote">${esc(i.notes)}</div>` : ""}
+            ${strip(i.photos)}
+            ${canPrice ? `<div class="ain">
+              <label class="field" style="margin:0"><span class="small">Bud (kr)</span><input class="input num" type="number" min="0" step="1" inputmode="numeric" name="pr-${i.lid}" value="${i.price ?? ""}" /></label>
+              <label class="field" style="margin:0"><span class="small">Kommentar til kunden <small>(valgfritt)</small></span><input class="input" name="an-${i.lid}" value="${esc(i.adminNote || "")}" placeholder="F.eks. riper på disken trekker ned" /></label>
+            </div>` : `<div class="sub" style="margin-top:6px"><b class="num">${i.price != null ? kr(Number(i.price)) : "Ingen pris"}</b>${i.adminNote ? `, ${esc(i.adminNote)}` : ""}</div>`}
+          </div>`).join("")}
+          ${canPrice ? `<div class="offer-tot"><span>Totalt bud</span><b class="num" id="ptot">0 kr</b></div>
+            <p class="err" id="pf-err" hidden></p><button class="btn full" type="submit">${priceBtn}</button>` : `<div class="offer-tot" style="margin-bottom:0"><span>Totalt</span><b class="num">${kr(s.total)}</b></div>`}
+        </form>
+      </div>
+      <div class="stack">
+        <div class="panel">
+          <h3 style="margin-bottom:12px">Neste steg</h3>
+          ${{
+            venter_bud: `<p class="muted small">Se på bildene, sett pris på hver ting og send budet. Trenger du flere bilder, skriv til kunden under Meldinger.</p>`,
+            bud_sendt: `<p class="muted small">Venter på at kunden godtar eller avslår. Du kan fortsatt endre budet.</p>`,
+            godtatt: `<p class="muted small" style="margin-bottom:12px">Kunden har godtatt ${kr(s.total)}. Send fraktetikett til ${esc(s.email)}, og merk pakken som mottatt når den kommer.</p><button class="btn full" data-act="mottatt">Merk som mottatt</button>`,
+            mottatt: `<p class="muted small" style="margin-bottom:12px">Sjekk pakken. Stemmer alt, betal ut. Stemmer noe ikke, send et justert bud i skjemaet.</p>
+              <label class="field"><span class="small">Beløp betalt (kr)</span><input class="input num" type="number" min="0" step="1" id="paid" value="${Math.round(s.total)}" /></label><button class="btn full" data-act="utbetalt">Merk som utbetalt</button>`,
+            utbetalt: `<p class="muted small">Utbetalt ${kr(s.paidAmount ?? s.total)}. Ferdig.</p>`,
+            avslatt: `<p class="muted small">Kunden takket nei. Ingenting å gjøre.</p>`,
+            kansellert: `<p class="muted small">Kansellert.</p>`
+          }[s.status]}
+          ${["venter_bud", "bud_sendt", "godtatt"].includes(s.status) ? `<button class="linkbtn" data-act="kansellert" style="margin-top:12px;color:var(--danger)">Kanseller forespørselen</button>` : ""}
+          ${["avslatt", "kansellert", "utbetalt"].includes(s.status) ? `<button class="linkbtn" data-act="slett" style="margin-top:12px;color:var(--danger)">Slett forespørselen</button>` : ""}
+        </div>
+        <div class="panel">
+          <h3 style="margin-bottom:12px">Kunde</h3>
+          <dl class="kv"><dt>Navn</dt><dd>${esc(s.ship.name)}</dd><dt>E-post</dt><dd><a href="mailto:${esc(s.email)}?subject=${encodeURIComponent("RaskBud " + s.ref)}">${esc(s.email)}</a></dd>
+          <dt>Mobil</dt><dd><a href="tel:${esc(s.ship.phone)}">${esc(s.ship.phone)}</a></dd><dt>Adresse</dt><dd>${esc(s.ship.addr)}, ${esc(s.ship.zip)} ${esc(s.ship.city)}</dd>
+          <dt>Utbetaling</dt><dd>${esc(pay)}${s.payout.method === "vipps" ? ` til ${esc(s.ship.phone)}` : ""}${s.payout.acct ? `<br>Konto ${esc(s.payout.acct.replace(/^(\d{4})(\d{2})(\d{5})$/, "$1 $2 $3"))}` : ""}</dd></dl>
+        </div>
+        <div class="panel">
+          <h3 style="margin-bottom:8px">Internt notat</h3>
+          <p class="muted small" style="margin-bottom:8px">Bare du ser dette.</p>
+          <textarea class="textarea" id="inote" style="min-height:90px">${esc(note)}</textarea>
+          <button class="btn small ghost" id="inote-save" style="margin-top:8px">Lagre notat</button>
+        </div>
+        ${messagesPanel(s, "admin")}
+      </div>
+    </div>
+  </div>`;
+}
+function adminDetailMount() {
+  const s = PAGE.s; if (!s) return;
+  document.querySelectorAll("[data-link]").forEach(b => b.addEventListener("click", async () => {
+    const i = s.items.find(x => x.lid === b.dataset.link); if (!i) return;
+    try {
+      await API.saveBarcode(i.upc, { name: i.name, platform: i.system || "", image: i.image || null, kind: i.cat === "Konsoll" ? "console" : i.cat === "Tilbehør" ? "accessory" : "game" });
+      b.replaceWith(Object.assign(document.createElement("span"), { textContent: " (lagret, kjennes igjen neste gang)" }));
+      toast("Koden er lagret. Neste gang noen skanner den, finner siden tingen automatisk.");
+    } catch (ex) { toast(ex.message); }
+  }));
+  bindMessages(s);
+  const f = document.getElementById("pf"), tot = document.getElementById("ptot");
+  if (tot) {
+    const calc = () => { tot.textContent = kr(s.items.reduce((t, i) => t + (Number(f[`pr-${i.lid}`].value) || 0), 0)); };
+    f.addEventListener("input", calc); calc();
+    f.addEventListener("submit", async e => {
+      e.preventDefault();
+      const err = document.getElementById("pf-err");
+      if (s.items.some(i => f[`pr-${i.lid}`].value === "")) { err.textContent = "Sett en pris på alle tingene. Bruk 0 for ting du ikke vil kjøpe."; err.hidden = false; return; }
+      const items = s.items.map(i => ({ ...i, price: Math.max(0, Number(f[`pr-${i.lid}`].value)), adminNote: f[`an-${i.lid}`].value.trim(), accepted: null }));
+      const total = items.reduce((t, i) => t + i.price, 0);
+      try {
+        await API.adminUpdate(s.ref, { items, total, status: "bud_sendt", messages: [...s.messages, sysMsg(`${s.status === "venter_bud" ? "Bud sendt" : "Nytt bud sendt"}: ${kr(total)}.`)] });
+        toast("Budet er sendt til kunden"); render();
+      } catch (ex) { toast(ex.message); }
+    });
+  }
+  document.querySelectorAll("[data-act]").forEach(b => b.addEventListener("click", async () => {
+    const act = b.dataset.act;
+    try {
+      if (act === "slett") { if (!confirm(`Slette ${s.ref} for godt?`)) return; await API.deleteSubmission(s.ref); toast("Slettet"); go("#/admin"); return; }
+      if (act === "kansellert" && !confirm("Kansellere forespørselen? Kunden ser at den er kansellert.")) return;
+      const patch = { status: act };
+      const msg = { mottatt: "Pakken er mottatt og sjekkes.", utbetalt: "", kansellert: "Forespørselen er kansellert." }[act];
+      if (act === "utbetalt") { const amt = Number(document.getElementById("paid").value); if (!(amt >= 0)) { toast("Skriv inn beløpet."); return; } patch.paidAmount = amt; patch.messages = [...s.messages, sysMsg(`Utbetalt ${kr(amt)}.`)]; }
+      else patch.messages = [...s.messages, sysMsg(msg)];
+      await API.adminUpdate(s.ref, patch); toast("Oppdatert"); render();
+    } catch (ex) { toast(ex.message); }
+  }));
+  document.getElementById("inote-save").addEventListener("click", async () => { try { await API.saveNote(s.ref, document.getElementById("inote").value); toast("Notatet er lagret"); } catch (ex) { toast(ex.message); } });
+}
+function adminPrices() {
+  return `<div class="wrap">
+    <div class="page-h"><h1>Kortpriser</h1><p>Prisene kundene ser på Cards-siden. Endringer gjelder nye sendinger.</p>${demoNote()}</div>
+    <div class="btnrow" style="margin-top:14px"><a class="btn small ghost" style="flex:none" href="#/admin">Forespørsler</a><a class="btn small ink" style="flex:none" href="#/admin?tab=priser" aria-current="page">Kortpriser</a></div>
+    <form id="rf" class="panel" style="margin-top:18px;max-width:720px">
+      <div class="rates">${BULK.map(b => `<label><span><b>${esc(b.name)}</b><small>${b.per === 1000 ? "Kroner per kort (0,1 = 100 kr per 1000)" : `Kroner per ${esc(b.unitName)}`}</small></span><input class="input num" type="number" min="0" step="0.01" inputmode="decimal" name="${b.id}" value="${rate(b.id)}" /></label>`).join("")}</div>
+      <button class="btn" style="margin-top:16px">Lagre prisene</button>
+    </form>
+  </div>`;
+}
+function adminPricesMount() {
+  const f = document.getElementById("rf");
+  f.addEventListener("submit", async e => {
+    e.preventDefault();
+    const v = {}; BULK.forEach(b => { v[b.id] = Math.max(0, Number(f[b.id].value) || 0); });
+    try { await API.saveSettings(v); Object.assign(RATES, v); toast("Prisene er lagret"); } catch (ex) { toast(ex.message); }
+  });
+}
+
+/* ---------- Info & legal ---------- */
+V.info = () => `<div class="wrap">
+  <div class="page-h"><h1>Slik fungerer RaskBud</h1><p>Du forteller hva du har, vi gir et bud, og du bestemmer. Pokémon-kort i bulk har fast pris.</p></div>
+  <div class="two" style="margin-top:18px">
+    <div class="panel faq">
+      <h2 style="margin-bottom:6px">Spørsmål og svar</h2>
+      ${[
+        ["Hvorfor ser jeg ikke prisen med en gang?", "Hver ting er forskjellig. Vi ser på bildene dine og gir et bud på akkurat det du har, i stedet for en gjennomsnittspris. Pokémon-kort i bulk har fast pris, så der ser du prisen med en gang."],
+        ["Hvor lang tid tar det å få bud?", "Vanligvis under 24 timer. Du ser budet under Min konto, og vi varsler deg på e-post."],
+        ["Må jeg selge hvis jeg sender inn?", "Nei. Du kan godta hele budet, bare noen av tingene, eller takke nei. Du sender bare det du selger."],
+        ["Hvorfor må jeg sende bilder?", "Bilder lar oss gi et bud uten forbehold. Uten bilder må vi gjette på standen, og da blir budet lavere."],
+        ["Hvordan sender jeg?", "Når du har godtatt budet, får du fraktetikett på e-post. Pakk godt, legg ved referansenummeret og lever pakken på et Posten-punkt. Frakten er gratis."],
+        ["Hva om tingene ikke stemmer med bildene?", "Da får du et nytt bud før vi betaler. Sier du nei, sender vi tingene tilbake gratis."],
+        ["Når får jeg pengene?", "Vi sjekker pakken samme dag eller neste virkedag. Vipps kommer innen 24 timer etter det, bankoverføring på 1–2 virkedager."]
+      ].map(([q, a], k) => `<details ${k === 0 ? "open" : ""}><summary>${q}</summary><p>${a}</p></details>`).join("")}
+    </div>
+    <div class="panel" id="kontakt">
+      <h2>Kontakt oss</h2>
+      <p class="muted">Gjelder det en forespørsel, skriv under Meldinger på forespørselen i stedet. Da har vi alt samlet.</p>
+      <form id="cf">
+        <label class="field"><span>Navn</span><input class="input" name="name" required autocomplete="name" /></label>
+        <label class="field"><span>E-post</span><input class="input" name="email" type="email" required autocomplete="email" /></label>
+        <label class="field"><span>Melding</span><textarea class="textarea" name="msg" required></textarea></label>
+        <button class="btn full">Send melding</button>
+      </form>
+    </div>
+  </div>
+</div>`;
+V.info.mount = (p) => {
+  if (p.get("k") === "1") setTimeout(() => document.getElementById("kontakt").scrollIntoView({ behavior: "smooth" }), 50);
+  document.getElementById("cf").addEventListener("submit", e => {
+    e.preventDefault();
+    const to = "post@raskbud.no", f = e.target;
+    location.href = `mailto:${to}?subject=${encodeURIComponent("Melding fra " + f.name.value)}&body=${encodeURIComponent(f.msg.value + "\n\n" + f.email.value)}`;
+  });
+};
+V.personvern = () => `<div class="wrap"><div class="page-h"><h1>Personvern</h1></div><div class="prose" style="margin-top:12px">
+  <p>RaskBud lagrer bare det vi trenger for å gi deg et bud, sende deg fraktetikett og betale deg.</p>
+  <h2>Hva vi lagrer</h2><ul><li>Navn, e-post og mobilnummer</li><li>Adressen pakken sendes fra</li><li>Tingene du vil selge, beskrivelsene og bildene du laster opp</li><li>Kontonummer, hvis du velger utbetaling til bank</li><li>Meldinger mellom deg og oss</li></ul>
+  <h2>Hvor lenge</h2><p>Forespørsler som ikke blir til salg slettes etter 12 måneder. Opplysninger om kjøp lagres så lenge regnskapsloven krever.</p>
+  <h2>Dine rettigheter</h2><p>Du kan be om innsyn, retting eller sletting når som helst ved å kontakte oss.</p>
+</div></div>`;
+V.vilkar = () => `<div class="wrap"><div class="page-h"><h1>Vilkår</h1></div><div class="prose" style="margin-top:12px">
+  <h2>Bud</h2><p>Budet gjelder tingene slik de er beskrevet og vist på bildene. Stemmer de ikke når vi mottar dem, gir vi et nytt bud. Sier du nei, sender vi tingene tilbake gratis.</p>
+  <h2>Kort til fast pris</h2><p>Bulkprisene gjelder kort som oppfyller kravene på Cards-siden. Kort som ikke gjør det, returneres eller trekkes fra.</p>
+  <h2>Eierskap</h2><p>Du må eie tingene du selger. Du eier dem til vi har godkjent sendingen og betalt deg.</p>
+  <h2>Frakt og utbetaling</h2><p>Frakten er gratis når du bruker etiketten vår, og pakken er forsikret for budbeløpet. Vi betaler til Vipps eller bankkonto.</p>
+</div></div>`;
+
+/* =============================== Router =============================== */
+function go(h) { if (location.hash === h) render(); else location.hash = h; }
+function parse() {
+  const raw = location.hash.replace(/^#/, "") || "/";
+  const [path, qs] = raw.split("?"); const parts = path.split("/").filter(Boolean);
+  let name = parts[0] || "home"; if (name === "samling") name = "vare";
+  return { name, arg: parts[1] ? decodeURIComponent(parts[1]) : (parts[0] === "samling" ? "ny" : undefined), params: new URLSearchParams(qs || (parts[0] === "samling" ? "cat=Samling" : "")) };
+}
+const TITLES = { home: "Selg spill, konsoller og kort", sok: "Selg ting", cards: "Cards", hot: "Ser etter", info: "Slik fungerer det", sending: "Din sending", konto: "Konto", ordre: "Forespørsel", admin: "Admin", personvern: "Personvern", vilkar: "Vilkår", vare: "Få bud", rediger: "Endre" };
+let lastRoute = "", renderTok = 0;
+async function render() {
+  const r = parse(); const view = V[r.name] || V.home; const tok = ++renderTok;
+  const main = document.getElementById("main");
+  const routeKey = r.name + "/" + (r.arg || "");
+  if (view.async && routeKey !== lastRoute) main.innerHTML = loadingHTML;
+  let html;
+  try { html = await view(r.params, r.arg); }
+  catch (ex) { console.error(ex); html = `<div class="wrap page-h">${emptyBox("⚠️", "Noe gikk galt", esc(ex.message || "Prøv å laste siden på nytt."), `<a class="btn" href="#/">Til forsiden</a>`)}</div>`; }
+  if (tok !== renderTok) return;
+  main.innerHTML = html;
+  try { view.mount && view.mount(r.params, r.arg); } catch (ex) { console.error(ex); }
+  hydrate(main);
+  const nav = r.name === "vare" || r.name === "rediger" ? "sok" : r.name === "ordre" ? "konto" : r.name;
+  document.querySelectorAll("[data-nav]").forEach(a => a.dataset.nav === nav ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current"));
+  const item = r.name === "vare" && byId(r.arg);
+  document.title = `${item ? item.name : r.name === "ordre" || (r.name === "admin" && r.arg) ? r.arg : TITLES[r.name] || TITLES.home} – RaskBud`;
+  if (routeKey !== lastRoute) { window.scrollTo(0, 0); if (lastRoute) main.focus({ preventScroll: true }); }
+  lastRoute = routeKey;
+  syncBag();
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-back]");
+  if (b && history.length > 1 && lastRoute) { e.preventDefault(); history.back(); }
+});
+window.addEventListener("hashchange", render);
+window.addEventListener("storage", e => { if (e.key === K.draft) { DRAFT = load(K.draft, { items: [] }); syncBag(); } });
+
+(async function boot() {
+  syncBag();
+  try { await API.init(); } catch (ex) { console.error(ex); toast("Kunne ikke koble til serveren. Prøv å laste siden på nytt."); }
+  try { const s = await API.getSettings(); if (s) Object.assign(RATES, s); } catch {}
+  await refreshMe();
+  render();
+})();
+</script>
+</body>
+</html>
