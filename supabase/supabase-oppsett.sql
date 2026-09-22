@@ -80,6 +80,8 @@ create table if not exists public.submissions (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+-- Sendingskode fra Posten/PostNord som admin legger inn etter at kunden har godtatt budet
+alter table public.submissions add column if not exists ship_code text;
 create index if not exists submissions_user_idx on public.submissions (user_id);
 create index if not exists submissions_status_idx on public.submissions (status);
 
