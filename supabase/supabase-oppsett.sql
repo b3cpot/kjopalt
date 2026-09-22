@@ -324,28 +324,44 @@ create or replace function public.html_unescape(t text) returns text language sq
   select replace(replace(replace(replace(replace(replace(coalesce(t, ''), '&#039;', ''''), '&quot;', '"'), '&amp;', '&'), '&lt;', '<'), '&gt;', '>'), '&#39;', '''');
 $$;
 
--- Søk på tittel eller produktkode (f.eks. SLES-53038)
+-- Søk (tittel eller produktkode) med sider og totalt antall. Tomt søk + konsoll = bla i alle spill for konsollen.
 drop function if exists public.search_games(text, text, int);
-create function public.search_games(q text, sys text default null, lim int default 20)
-returns table (system text, title text, region text, repo text, file text, image text, year text, uids text[])
+drop function if exists public.search_games(text, text, int, int);
+create function public.search_games(q text, sys text default null, lim int default 20, off int default 0)
+returns table (system text, title text, region text, repo text, file text, image text, year text, uids text[], total bigint)
 language sql stable set search_path = public, extensions as $$
-  with w as (select public.norm_text(q) as nq, regexp_replace(lower(q), '[^a-z0-9]', '', 'g') as code)
-  select g.system, g.title, g.region, g.repo, g.file, g.image, g.year, g.uids
-  from public.games g, w
-  where length(w.nq) >= 2 and (sys is null or g.system = sys)
-    and (
-      g.title_norm like all (array(select '%' || x || '%' from regexp_split_to_table(w.nq, ' ') x where x <> ''))
-      or (length(w.code) >= 6 and w.code ~ '[a-z]' and w.code ~ '[0-9]' and g.uids_norm like '%' || w.code || '%')
-    )
+  with w as (select public.norm_text(coalesce(q, '')) as nq, regexp_replace(lower(coalesce(q, '')), '[^a-z0-9]', '', 'g') as code),
+  hits as (
+    select g.*, w.nq, w.code from public.games g, w
+    where (sys is null or g.system = sys)
+      and (
+        (length(w.nq) < 2 and sys is not null)
+        or (length(w.nq) >= 2 and g.title_norm like all (array(select '%' || x || '%' from regexp_split_to_table(w.nq, ' ') x where x <> '')))
+        or (length(w.code) >= 6 and w.code ~ '[a-z]' and w.code ~ '[0-9]' and g.uids_norm like '%' || w.code || '%')
+      )
+  )
+  select h.system, h.title, h.region, h.repo, h.file, h.image, h.year, h.uids, count(*) over () as total
+  from hits h
   order by
-    (length(w.code) >= 6 and coalesce(g.uids_norm, '') like '%' || w.code || '%') desc,
-    (g.title_norm = w.nq) desc, (g.source = 'libretro') desc, (g.title_norm like w.nq || '%') desc,
-    extensions.similarity(g.title_norm, w.nq) desc,
-    case when g.region in ('Norway','Scandinavia','Sweden','Denmark','Finland','Europe','World','UK') then 0 else 1 end,
-    (g.image is not null or g.file is not null) desc, length(g.title)
-  limit least(greatest(lim, 1), 50);
+    (length(h.code) >= 6 and coalesce(h.uids_norm, '') like '%' || h.code || '%') desc,
+    (length(h.nq) >= 2 and h.title_norm = h.nq) desc,
+    case when length(h.nq) < 2 then 0 else (h.source = 'libretro')::int end desc,
+    (length(h.nq) >= 2 and h.title_norm like h.nq || '%') desc,
+    case when length(h.nq) >= 2 then extensions.similarity(h.title_norm, h.nq) else 0 end desc,
+    case when length(h.nq) < 2 then h.title_norm end,
+    case when h.region in ('Norway','Scandinavia','Sweden','Denmark','Finland','Europe','World','UK') then 0 else 1 end,
+    (h.image is not null or h.file is not null) desc,
+    length(h.title)
+  limit least(greatest(lim, 1), 60) offset greatest(off, 0);
 $$;
-grant execute on function public.search_games(text, text, int) to anon, authenticated;
+grant execute on function public.search_games(text, text, int, int) to anon, authenticated;
+create or replace function public.game_systems()
+returns table (system text, n bigint)
+language sql stable set search_path = public as $$
+  select system, count(*) from public.games group by system order by count(*) desc;
+$$;
+grant execute on function public.game_systems() to anon, authenticated;
+
 grant execute on function public.norm_text(text) to anon, authenticated;
 
 -- Last inn katalogen (databasen henter filen selv fra GitHub; repoet må være offentlig mens dette kjøres):
