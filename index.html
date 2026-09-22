@@ -720,6 +720,11 @@ main:focus { outline: none; }
 .retbox b { display: block; margin-bottom: 4px; }
 .retbox ul { margin: 0 0 6px 18px; }
 .retbox small { color: var(--muted); }
+.systiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.systile { display: grid; gap: 2px; text-align: left; padding: 14px 16px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); color: var(--ink); min-height: 64px; }
+.systile:hover { border-color: var(--ink); }
+.systile b { font-size: 16px; }
+.systile span { color: var(--muted); font-size: 13.5px; }
 [hidden] { display: none !important; }
 </style>
 </head>
@@ -1386,8 +1391,24 @@ function normExt(x) {
   const cat = x.kind === "console" ? "Konsoll" : x.kind === "accessory" ? "Tilbehør" : "Spill";
   return { name: x.name, system: x.platform || x.system || "", image: x.image || null, year: x.year || "", cat, upc: x.upc || null, source: x.source || "", icon: catIcon(cat) };
 }
+let GAME_SYSTEMS = []; // [{system, n}] fra databasen
 const Lookup = {
   mem: new Map(),
+  // Én side (48) med spill fra databasen: søk, eller bla i en konsoll når q er tom
+  async page(q, sys, off) {
+    if (!LIVE) return { items: [], total: 0 };
+    const { data, error } = await API.sb.rpc("search_games", { q: q || "", sys: sys || null, lim: 48, off: off || 0 });
+    if (error) throw error;
+    const rows = data || [];
+    return { total: rows[0]?.total ? Number(rows[0].total) : 0,
+      items: rows.map(g => normExt({ name: g.title, platform: g.system, image: g.image || (g.file ? boxArt(g.repo, g.file) : null),
+        year: [g.region === "Europe" ? "PAL" : g.region, g.year].filter(Boolean).join(" · "), kind: "game" })) };
+  },
+  async systems() {
+    if (!LIVE || GAME_SYSTEMS.length) return GAME_SYSTEMS;
+    try { const { data } = await API.sb.rpc("game_systems"); GAME_SYSTEMS = data || []; } catch {}
+    return GAME_SYSTEMS;
+  },
   async call(params) {
     const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 9000);
     try {
@@ -1650,6 +1671,8 @@ V.home.mount = () => {
     if (e.target.closest("[data-own]")) go(`#/vare/ny?name=${encodeURIComponent(inp.value.trim())}`);
   });
 };
+const SYS_ORDER = ["PS1","PS2","PS3","PS4","PS5","PSP","PS Vita","NES","SNES","N64","GameCube","Wii","Wii U","Switch","Switch 2","Game Boy","GBC","GBA","DS","3DS","Virtual Boy","Xbox","Xbox 360","Xbox One","Xbox Series","Master System","Mega Drive","Mega-CD","32X","Saturn","Dreamcast","Game Gear","Atari 2600"];
+const allSystems = () => [...new Set([...SYS_ORDER.filter(x => !GAME_SYSTEMS.length || GAME_SYSTEMS.some(g => g.system === x)), ...SYSTEMS])];
 V.sok = (p) => {
   const q = p.get("q") || "", cat = p.get("cat") || "Alle", sys = p.get("sys") || "Alle";
   return `<div class="wrap">
@@ -1659,7 +1682,7 @@ V.sok = (p) => {
       <div class="chips" role="group" aria-label="Kategori">${["Alle", ...CATS.filter(c => !["Samling", "Annet"].includes(c.name)).map(c => c.name)].map(c => `<button type="button" class="chip" data-cat="${c}" aria-pressed="${c === cat}">${c}</button>`).join("")}</div>
       <div class="filters2">
         <label class="sr" for="sys">Konsoll eller merke</label>
-        <select id="sys" class="select"><option value="Alle">Alle merker</option>${SYSTEMS.map(s => `<option ${s === sys ? "selected" : ""}>${esc(s)}</option>`).join("")}</select>
+        <select id="sys" class="select"><option value="Alle">Alle konsoller og merker</option>${allSystems().map(s => `<option ${s === sys ? "selected" : ""}>${esc(s)}</option>`).join("")}</select>
         <button type="button" class="btn small ghost" data-scan style="width:auto">${barcodeIcon}<span class="hide-s">&nbsp;Skann</span></button>
         <a class="btn small ghost" href="#/vare/ny" id="own" style="width:auto">+ Legg til<span class="hide-s">&nbsp;noe annet</span></a>
         <span class="count" id="count"></span>
@@ -1672,30 +1695,61 @@ V.sok = (p) => {
 V.sok.mount = (p) => {
   const st = { q: p.get("q") || "", cat: p.get("cat") || "Alle", sys: p.get("sys") || "Alle" };
   const res = document.getElementById("results"), rem = document.getElementById("remote"), cnt = document.getElementById("count"), q = document.getElementById("q"), clr = document.getElementById("clr"), own = document.getElementById("own");
-  let tok = 0, timer, ext = [];
+  let tok = 0, timer, ext = [], total = 0, list = [];
+  const sysTiles = () => `<div class="sec-h" style="margin:28px 0 12px"><h2 style="font-size:22px">Bla i alle spill</h2></div>
+    <div class="systiles">${(GAME_SYSTEMS.length ? SYS_ORDER.map(x => GAME_SYSTEMS.find(g => g.system === x)).filter(Boolean) : [])
+      .map(g => `<button type="button" class="systile" data-sys="${esc(g.system)}"><b>${esc(g.system)}</b><span class="num">${nf.format(g.n)} spill</span></button>`).join("")}</div>`;
+  const paintRemote = () => {
+    const head = st.q.trim() ? (list.length ? "Flere treff i spilldatabasen" : "Treff i spilldatabasen") : `Alle spill til ${esc(st.sys)}`;
+    rem.innerHTML = ext.length ? `<div class="sec-h" style="margin:${list.length ? 32 : 4}px 0 14px"><h2 style="font-size:22px">${head}</h2><span class="muted small num">${nf.format(total)} ${total === 1 ? "spill" : "spill"}</span></div>
+      <div class="grid">${ext.map(extCard).join("")}</div>
+      ${ext.length < total ? `<div style="text-align:center;margin-top:18px"><button type="button" class="btn ghost" id="more" style="width:auto;padding:0 26px">Vis flere <span class="muted num" style="font-weight:500">&nbsp;(${nf.format(ext.length)} av ${nf.format(total)})</span></button></div>` : ""}` : "";
+    hydrate(rem);
+  };
+  const loadDb = async (my, append) => {
+    try {
+      const pg = await Lookup.page(st.q.trim(), st.sys === "Alle" ? null : st.sys, append ? ext.length : 0);
+      if (my !== tok) return;
+      const fresh = pg.items.filter(x => !list.some(m => sameThing(m, x)));
+      ext = append ? [...ext, ...fresh] : fresh; total = pg.total;
+      // Finner vi nesten ingenting selv, spør vi TheGamesDB (sparer kvoten ellers)
+      if (!append && st.q.trim().length >= 3 && pg.total < 4 && LOOKUP_URL) {
+        const more = (await Lookup.search(st.q)).filter(x => !ext.some(e => sameThing(e, x)) && !list.some(m => sameThing(m, x)) && (st.sys === "Alle" || x.system === st.sys));
+        if (my !== tok) return;
+        ext = [...ext, ...more]; total = ext.length;
+      }
+    } catch (ex) { console.error(ex); if (!append) { ext = []; total = 0; } }
+    paintRemote();
+    if (!list.length && !ext.length) res.innerHTML = noneBox();
+  };
+  let noneBox = () => "";
   const draw = () => {
-    const list = rankSearch(search(st.q, st.cat, st.sys), st.q);
-    cnt.textContent = `${list.length} ${list.length === 1 ? "treff" : "treff"}`;
+    list = rankSearch(search(st.q, st.cat, st.sys), st.q);
     const ownHref = `#/vare/ny?${new URLSearchParams({ ...(st.q ? { name: st.q } : {}), ...(st.cat !== "Alle" && st.cat !== "Kort" ? { cat: st.cat } : {}) })}`;
     own.href = ownHref;
-    const remoteOn = !!LOOKUP_URL && st.q.trim().length >= 3 && ["Alle", "Spill"].includes(st.cat);
-    const none = emptyBox("📭", "Fant den ikke", `Det gjør ingenting. Legg til ${st.q ? `«${esc(st.q)}»` : "tingen"} selv, så gir vi deg et bud.`, `<div class="btnrow" style="justify-content:center"><a class="btn" href="${ownHref}">Legg til selv</a><button type="button" class="btn ghost" data-scan>${barcodeIcon} Skann strekkoden</button></div>`);
-    res.innerHTML = list.length ? `<div class="grid">${list.map(card).join("")}</div>` : remoteOn ? "" : none;
-    rem.innerHTML = remoteOn ? `<p class="muted" style="margin-top:20px">Søker i spilldatabasen…</p>` : "";
+    const games = ["Alle", "Spill"].includes(st.cat);
+    const dbOn = LIVE && games && (st.q.trim().length >= 3 || st.sys !== "Alle");
+    const tiles = LIVE && st.cat === "Spill" && !st.q.trim() && st.sys === "Alle";
+    noneBox = () => emptyBox("📭", "Fant den ikke", `Det gjør ingenting. Legg til ${st.q ? `«${esc(st.q)}»` : "tingen"} selv, så gir vi deg et bud.`, `<div class="btnrow" style="justify-content:center"><a class="btn" href="${ownHref}">Legg til selv</a><button type="button" class="btn ghost" data-scan>${barcodeIcon} Skann strekkoden</button></div>`);
+    cnt.textContent = dbOn ? "" : `${list.length} treff`;
+    res.innerHTML = tiles
+      ? sysTiles().replace("margin:28px 0 12px", "margin:4px 0 12px") + (list.length ? `<div class="sec-h" style="margin:32px 0 14px"><h2 style="font-size:22px">Spill vi ser etter nå</h2></div><div class="grid">${list.map(card).join("")}</div>` : "")
+      : list.length ? `<div class="grid">${list.map(card).join("")}</div>` : dbOn ? "" : noneBox();
+    rem.innerHTML = dbOn ? `<p class="muted" style="margin-top:20px">${st.q.trim() ? "Søker i spilldatabasen…" : "Henter spill…"}</p>` : "";
     hydrate(res);
     const u = new URLSearchParams(); Object.entries(st).forEach(([k, v]) => { if (v && v !== "Alle") u.set(k, v); });
     history.replaceState(null, "", "#/sok" + (u.toString() ? "?" + u : ""));
     LAST_BROWSE = location.hash;
     clr.hidden = !st.q;
-    clearTimeout(timer); const my = ++tok;
-    if (remoteOn) timer = setTimeout(async () => {
-      ext = (await Lookup.search(st.q)).filter(x => !list.some(m => sameThing(m, x))).filter(x => st.sys === "Alle" || x.system === st.sys);
-      if (my !== tok) return;
-      rem.innerHTML = ext.length ? `<div class="sec-h" style="margin:${list.length ? 32 : 4}px 0 14px"><h2 style="font-size:22px">${list.length ? "Flere treff i spilldatabasen" : "Treff i spilldatabasen"}</h2></div><div class="grid">${ext.map(extCard).join("")}</div>` : "";
-      if (!list.length && !ext.length) res.innerHTML = none;
-      hydrate(rem);
-    }, 350);
+    clearTimeout(timer); const my = ++tok; ext = []; total = 0;
+    if (dbOn) timer = setTimeout(() => loadDb(my, false), st.q ? 300 : 0);
+    if (tiles && !GAME_SYSTEMS.length) Lookup.systems().then(() => { if (my === tok) draw(); });
   };
+  res.addEventListener("click", e => { const t = e.target.closest("[data-sys]"); if (!t) return;
+    st.sys = t.dataset.sys; document.getElementById("sys").value = st.sys; draw(); window.scrollTo({ top: 0, behavior: "smooth" }); });
+  rem.addEventListener("click", async e => {
+    if (e.target.closest("#more")) { const b = e.target.closest("#more"); b.disabled = true; b.textContent = "Henter flere…"; await loadDb(tok, true); }
+  });
   rem.addEventListener("click", e => { const b = e.target.closest("[data-ext]"); if (b && ext[+b.dataset.ext]) pickExternal(ext[+b.dataset.ext]); });
   q.addEventListener("input", () => { st.q = q.value; draw(); });
   clr.addEventListener("click", () => { q.value = ""; st.q = ""; draw(); q.focus(); });
@@ -2554,6 +2608,7 @@ window.addEventListener("storage", e => { if (e.key === K.draft) { DRAFT = load(
   const authQuery = new URLSearchParams(location.search);
   try { await API.init(); } catch (ex) { console.error(ex); toast("Kunne ikke koble til serveren. Prøv å laste siden på nytt."); }
   try { const s = await API.getSettings(); if (s) Object.assign(RATES, s); } catch {}
+  Lookup.systems();
   if (LIVE && authQuery.get("code")) { try { await API.sb.auth.exchangeCodeForSession(authQuery.get("code")); } catch (ex) { console.error(ex); } }
   await refreshMe();
   if (authHash || authQuery.get("code") || authQuery.get("error")) {
