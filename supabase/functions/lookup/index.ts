@@ -11,9 +11,14 @@
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-const TGDB = Deno.env.get("TGDB_KEY") ?? "";
 const RAWG = Deno.env.get("RAWG_KEY") ?? "";
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+// Nøkkelen hentes fra Supabase-hemmeligheter, ellers fra den låste tabellen app_secrets
+let TGDB = Deno.env.get("TGDB_KEY") ?? "";
+if (!TGDB) {
+  const { data } = await db.from("app_secrets").select("value").eq("key", "TGDB_KEY").maybeSingle();
+  TGDB = data?.value ?? "";
+}
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",

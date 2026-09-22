@@ -1401,10 +1401,9 @@ const Lookup = {
     q = q.trim().toLowerCase();
     if (!LIVE || q.length < 3) return Promise.resolve([]);
     if (!this.mem.has(q)) this.mem.set(q, (async () => {
-      const [own, ext] = await Promise.all([
-        API.sb.rpc("search_games", { q, sys: null, lim: 12 }).then(r => r.data || []).catch(() => []),
-        LOOKUP_URL ? this.call({ q }).then(d => d.items || []).catch(() => []) : Promise.resolve([])
-      ]);
+      // Egen katalog først. TheGamesDB (1000 oppslag/mnd) spørres bare når vi finner lite selv.
+      const own = await API.sb.rpc("search_games", { q, sys: null, lim: 12 }).then(r => r.data || []).catch(() => []);
+      const ext = own.length < 4 && LOOKUP_URL ? await this.call({ q }).then(d => d.items || []).catch(() => []) : [];
       const mine = own.map(g => normExt({ name: g.title, platform: g.system, image: boxArt(g.repo, g.file), year: g.region, kind: "game" }));
       const out = [...mine, ...ext.map(normExt)], seen = new Set();
       return out.filter(x => { const k = (x.name + "|" + x.system).toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; });
