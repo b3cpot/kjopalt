@@ -726,6 +726,22 @@ main:focus { outline: none; }
 .systile b { font-size: 16px; }
 .systile span { color: var(--muted); font-size: 13.5px; }
 .build { color: var(--muted); font-size: 11.5px; opacity: .7; margin-top: 18px; text-align: center; }
+.wnote { display: block; margin-top: 4px; color: var(--hot); font-size: 13px; font-weight: 600; }
+.linklike { background: none; border: 0; padding: 0; text-align: left; color: inherit; font: inherit; cursor: pointer; }
+.wlist { display: grid; gap: 8px; }
+.wrow, .wpick { display: flex; gap: 12px; align-items: center; padding: 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.wpick { margin-bottom: 8px; }
+.wrow .em, .wpick .em { width: 48px; height: 48px; border-radius: 10px; flex: none; display: grid; place-items: center; font-size: 24px; position: relative; overflow: hidden; background: #fff; border: 1px solid var(--line); }
+.wmain { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.wmain b { font-size: 15px; line-height: 1.25; }
+.wmain small { color: var(--muted); font-size: 13px; }
+.wnote-in { min-height: 38px; font-size: 14px; margin-top: 4px; }
+.wbtns { display: flex; gap: 4px; flex: none; }
+.iconbtn { width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font-size: 16px; display: grid; place-items: center; }
+.iconbtn:disabled { opacity: .35; }
+.iconbtn.danger { color: var(--danger); }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (max-width: 520px) { .row2 { grid-template-columns: 1fr; } .wrow { flex-wrap: wrap; } .wbtns { margin-left: 60px; } }
 [hidden] { display: none !important; }
 </style>
 </head>
@@ -776,7 +792,7 @@ main:focus { outline: none; }
       </ul>
     </div>
   </div>
-<p class="build" id="build">Versjon 2026-09-22 20:38 UTC</p></footer>
+<p class="build" id="build">Versjon 2026-09-22 20:45 UTC</p></footer>
 
 <nav class="tabbar" aria-label="Snarveier">
   <a href="#/" data-nav="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Hjem</a>
@@ -1014,10 +1030,18 @@ const wasShipped = i => i.shipped !== false;
 const isRevised = i => i.revised === true;           // prisen er endret etter sjekk: kunden må ta stilling
 const lockedAfter = s => afterCheck(s) ? s.items.filter(i => wasShipped(i) && !isRevised(i)) : []; // allerede avtalt
 const byId = id => CATALOG.find(i => i.id === id);
+let WANTED = [];
+const wkey = (name, system) => `${String(name || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim()}|${String(system || "").toLowerCase()}`;
+const findWanted = i => WANTED.find(w => (w.catalog_id && i.id && w.catalog_id === i.id) || (!w.catalog_id && wkey(w.name, w.system) === wkey(i.name, i.system)));
+const isHot = i => !!findWanted(i);
+const wantedItems = () => WANTED.map(w => {
+  const c = w.catalog_id && byId(w.catalog_id);
+  return c ? { ...c, note: w.note, wid: w.id } : { id: null, wid: w.id, ext: true, name: w.name, system: w.system || "", cat: w.cat || "Spill", image: w.image, icon: catIcon(w.cat || "Spill"), note: w.note, year: "" };
+});
 const bulkById = id => BULK.find(b => b.id === id);
 
 /* =============================== Helpers =============================== */
-const K = { draft: "rb_draft_v3", users: "rb_users_v3", session: "rb_session_v3", subs: "rb_subs_v3", seq: "rb_seq_v3", notes: "rb_notes_v3", settings: "rb_settings_v3", barcodes: "rb_barcodes_v3", wiki: "rb_wiki_v1" };
+const K = { draft: "rb_draft_v3", users: "rb_users_v3", session: "rb_session_v3", subs: "rb_subs_v3", seq: "rb_seq_v3", notes: "rb_notes_v3", settings: "rb_settings_v3", barcodes: "rb_barcodes_v3", wiki: "rb_wiki_v1", wanted: "rb_wanted_v1" };
 function load(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } }
 function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch { return false; } }
 function drop(k) { try { localStorage.removeItem(k); } catch {} }
@@ -1190,7 +1214,12 @@ const LocalAPI = {
   async getSettings() { return load(K.settings, null); },
   async getBarcode(code) { return load(K.barcodes, {})[code] || null; },
   async saveBarcode(code, item) { const b = load(K.barcodes, {}); b[code] = { ...item, source: "admin" }; save(K.barcodes, b); },
-  async saveSettings(v) { save(K.settings, v); }
+  async saveSettings(v) { save(K.settings, v); },
+  _w() { let w = load(K.wanted, null); if (!w) { w = CATALOG.filter(i => i.hot).map((i, k) => ({ id: k + 1, catalog_id: i.id, name: i.name, system: i.system, cat: i.cat, image: i.image, note: "", sort: k })); save(K.wanted, w); } return w; },
+  async getWanted() { return this._w().slice().sort((a, b) => a.sort - b.sort); },
+  async addWanted(r) { const w = this._w(); const row = { ...r, id: Math.max(0, ...w.map(x => x.id)) + 1, sort: w.length ? Math.max(...w.map(x => x.sort)) + 1 : 0 }; w.push(row); save(K.wanted, w); return row; },
+  async updateWanted(id, patch) { const w = this._w(); const i = w.findIndex(x => x.id === id); if (i >= 0) { w[i] = { ...w[i], ...patch }; save(K.wanted, w); } },
+  async removeWanted(id) { save(K.wanted, this._w().filter(x => x.id !== id)); }
 };
 
 /* =============================== Backend: Supabase (live) =============================== */
@@ -1271,7 +1300,13 @@ const SupaAPI = {
   async getBarcode(code) { const { data } = await this.sb.from("barcodes").select("item, source").eq("code", code).maybeSingle(); return data ? { ...data.item, source: data.source } : null; },
   async saveBarcode(code, item) { const { error } = await this.sb.from("barcodes").upsert({ code, item, source: "admin", updated_at: new Date().toISOString() }); if (error) throw new Error(error.message); },
   async getSettings() { const { data } = await this.sb.from("settings").select("value").eq("key", "bulk").maybeSingle(); return data?.value || null; },
-  async saveSettings(v) { const { error } = await this.sb.from("settings").upsert({ key: "bulk", value: v }); if (error) throw new Error(error.message); }
+  async saveSettings(v) { const { error } = await this.sb.from("settings").upsert({ key: "bulk", value: v }); if (error) throw new Error(error.message); },
+  async getWanted() { const { data, error } = await this.sb.from("wanted").select("id, catalog_id, name, system, cat, image, note, sort").order("sort").order("created_at"); if (error) throw new Error(error.message); return data || []; },
+  async addWanted(r) {
+    const { data: last } = await this.sb.from("wanted").select("sort").order("sort", { ascending: false }).limit(1).maybeSingle();
+    const { data, error } = await this.sb.from("wanted").insert({ ...r, sort: (last?.sort ?? -1) + 1 }).select().single(); if (error) throw new Error(error.message); return data; },
+  async updateWanted(id, patch) { const { error } = await this.sb.from("wanted").update(patch).eq("id", id); if (error) throw new Error(error.message); },
+  async removeWanted(id) { const { error } = await this.sb.from("wanted").delete().eq("id", id); if (error) throw new Error(error.message); }
 };
 const API = LIVE ? SupaAPI : LocalAPI;
 let ME = null, OFFERS = 0;
@@ -1317,12 +1352,15 @@ function sticker(amount, label, cls = "", rot) {
   return `<span class="sticker ${cls}" ${rot != null ? `style="--rot:${rot}deg"` : ""}><small>${label}</small><span class="amt num">${typeof amount === "number" ? kr(amount) : esc(amount)}</span></span>`;
 }
 function card(i) {
+  const note = i.note ?? findWanted(i)?.note;
+  const open = i.ext ? `button type="button" data-want="${i.wid}" style="border:0;background:none;text-align:left;width:100%;padding:0;cursor:pointer"` : `a href="#/vare/${i.id}"`;
+  const close = i.ext ? "button" : "a";
   return `<article class="card">
-    <a class="card-link" href="#/vare/${i.id}">
-      <div class="thumb t-${i.cat}" aria-hidden="true">${picHTML(i)}${i.hot ? `<span class="hotflag">Ser etter nå</span>` : ""}</div>
-      <div class="card-b"><span class="t">${esc(i.name)}</span><span class="s">${esc(i.system)}, ${esc(i.cat.toLowerCase())}</span></div>
-    </a>
-    <div class="card-b" style="padding-top:0"><a class="btn small ghost full" href="#/vare/${i.id}">Få bud</a></div>
+    <${open} class="card-link">
+      <div class="thumb t-${i.cat}" aria-hidden="true">${picHTML(i)}${isHot(i) ? `<span class="hotflag">Ser etter nå</span>` : ""}</div>
+      <div class="card-b"><span class="t">${esc(i.name)}</span><span class="s">${esc([i.system, i.cat.toLowerCase()].filter(Boolean).join(", "))}</span>${note ? `<span class="wnote">${esc(note)}</span>` : ""}</div>
+    </${close}>
+    <div class="card-b" style="padding-top:0">${i.ext ? `<button type="button" class="btn small ghost full" data-want="${i.wid}">Få bud</button>` : `<a class="btn small ghost full" href="#/vare/${i.id}">Få bud</a>`}</div>
   </article>`;
 }
 function emptyBox(icon, title, text, cta) { return `<div class="empty"><div class="e" aria-hidden="true">${icon}</div><h3>${title}</h3><p>${text}</p>${cta || ""}</div>`; }
@@ -1343,7 +1381,7 @@ function rankSearch(list, q) {
     if (terms.every(t => nm.includes(t))) return 3;
     return 0; // traff bare på konsoll/merke
   };
-  return list.map(i => [score(i), i]).sort((a, b) => b[0] - a[0] || (a[1].cat === "Konsoll" ? -1 : 0) - (b[1].cat === "Konsoll" ? -1 : 0) || b[1].hot - a[1].hot || a[1].name.localeCompare(b[1].name, "nb")).map(x => x[1]);
+  return list.map(i => [score(i), i]).sort((a, b) => b[0] - a[0] || (a[1].cat === "Konsoll" ? -1 : 0) - (b[1].cat === "Konsoll" ? -1 : 0) || isHot(b[1]) - isHot(a[1]) || a[1].name.localeCompare(b[1].name, "nb")).map(x => x[1]);
 }
 function strip(photos) { return photos?.length ? `<div class="strip">${photos.map((p, k) => `<img src="${esc(p)}" alt="Bilde ${k + 1}" data-lb loading="lazy">`).join("")}</div>` : ""; }
 function thumbOf(l) {
@@ -1450,7 +1488,7 @@ function pickRow(x, attrs) {
 }
 function extCard(x, k) {
   return `<article class="card"><button type="button" class="card-link" data-ext="${k}" style="border:0;background:none;text-align:left;width:100%;padding:0;cursor:pointer">
-    <div class="thumb t-${x.cat}" aria-hidden="true">${picHTML(x)}</div>
+    <div class="thumb t-${x.cat}" aria-hidden="true">${picHTML(x)}${isHot(x) ? `<span class="hotflag">Ser etter nå</span>` : ""}</div>
     <div class="card-b"><span class="t">${esc(x.name)}</span><span class="s">${esc([x.system, x.year].filter(Boolean).join(", ") || x.cat)}</span></div></button>
     <div class="card-b" style="padding-top:0"><button type="button" class="btn small ghost full" data-ext="${k}">Få bud</button></div></article>`;
 }
@@ -1573,13 +1611,19 @@ function openScanner() {
   startCam();
 }
 document.addEventListener("click", e => { if (e.target.closest("[data-scan]")) { e.preventDefault(); openScanner(); } });
+// Klikk på en «Ser etter»-ting som ikke er i den faste katalogen: åpne skjemaet med navn, konsoll og bilde
+document.addEventListener("click", e => {
+  const wb = e.target.closest("[data-want]"); if (!wb) return;
+  const w = WANTED.find(x => String(x.id) === wb.dataset.want); if (!w) return;
+  e.preventDefault(); pickExternal({ name: w.name, system: w.system || "", image: w.image || null, cat: w.cat || "Spill", year: "", icon: catIcon(w.cat || "Spill") });
+});
 
 /* =============================== Views =============================== */
 const V = {};
 let PAGE = {};
 
 V.home = () => {
-  const hot = CATALOG.filter(i => i.hot).slice(0, 8);
+  const hot = wantedItems().slice(0, 8);
   return `
   <section class="hero"><div class="wrap hero-in">
     <div>
@@ -1609,7 +1653,7 @@ V.home = () => {
 
   <section class="sec"><div class="wrap">
     <div class="sec-h"><h2>Dette ser vi etter nå</h2><a href="#/hot">Hele listen</a></div>
-    <div class="grid">${hot.map(card).join("")}</div>
+    ${hot.length ? `<div class="grid">${hot.map(card).join("")}</div>` : `<p class="muted">Vi kjøper det meste. Søk etter tingen din, så får du et bud.</p>`}
   </div></section>
 
   <section class="sec"><div class="wrap">
@@ -1774,7 +1818,7 @@ function editorHTML(item, line, p, pick) {
       <div class="thumb t-${cat}" id="ed-thumb" aria-hidden="true">${picHTML(item || { image: src?.image, cat, icon: catIcon(cat) })}</div>
       <form id="ef" novalidate>
         ${item ? `<h1>${esc(item.name)}</h1>
-          <div class="tags"><span class="tag">${esc(item.system)}</span><span class="tag">${esc(item.cat)}</span>${item.hot ? `<span class="tag hot">Vi ser etter denne nå</span>` : ""}</div>`
+          <div class="tags"><span class="tag">${esc(item.system)}</span><span class="tag">${esc(item.cat)}</span>${isHot(item) ? `<span class="tag hot">Vi ser etter denne nå</span>` : ""}${findWanted(item)?.note ? `<span class="tag">${esc(findWanted(item).note)}</span>` : ""}</div>`
         : `<h1>${line ? "Endre tingen" : pick ? "Stemmer dette?" : cat === "Samling" ? "Få bud på samlingen" : "Hva vil du selge?"}</h1>
           ${pick ? `<p class="muted" style="margin-top:6px">Sjekk navn og konsoll, og rett opp om noe er feil.</p>` : ""}
           ${code ? `<p class="tag" style="display:inline-block;margin-top:10px">Strekkode ${esc(code)}</p>` : ""}
@@ -1915,13 +1959,13 @@ V.cards.mount = () => {
 
 V.hot = () => {
   const groups = {};
-  CATALOG.filter(i => i.hot).forEach(i => (groups[i.system] ||= []).push(i));
+  wantedItems().forEach(i => (groups[i.system || i.cat] ||= []).push(i));
   return `<div class="wrap">
     <div class="page-h"><h1>Dette ser vi etter</h1><p>Har du noe av dette, er vi ekstra interessert akkurat nå. Send oss bilder, så får du et godt bud.</p></div>
     <div style="margin-top:18px">
     ${Object.entries(groups).sort((a, b) => b[1].length - a[1].length).map(([sys, items], k) => `<details class="acc" ${k < 2 ? "open" : ""}>
       <summary>${esc(sys)}<span class="n">${items.length} ${items.length === 1 ? "ting" : "ting"}</span>${chev}</summary>
-      ${items.map(i => `<div class="hrow"><span class="em t-${i.cat}" aria-hidden="true">${picHTML(i)}</span><a class="nm" href="#/vare/${i.id}">${esc(i.name)}<small>${esc(i.cat)}</small></a><a class="btn small ghost" style="width:auto;padding:0 14px" href="#/vare/${i.id}">Få bud</a></div>`).join("")}
+      ${items.map(i => `<div class="hrow"><span class="em t-${i.cat}" aria-hidden="true">${picHTML(i)}</span>${i.ext ? `<button type="button" class="nm linklike" data-want="${i.wid}">` : `<a class="nm" href="#/vare/${i.id}">`}${esc(i.name)}<small>${esc([i.cat, i.note].filter(Boolean).join(" · "))}</small>${i.ext ? "</button>" : "</a>"}${i.ext ? `<button type="button" class="btn small ghost" style="width:auto;padding:0 14px" data-want="${i.wid}">Få bud</button>` : `<a class="btn small ghost" style="width:auto;padding:0 14px" href="#/vare/${i.id}">Få bud</a>`}</div>`).join("")}
     </details>`).join("")}
     </div>
   </div>`;
@@ -2311,6 +2355,7 @@ V.admin = async (p, ref) => {
   const g = adminGate(); if (g) return g;
   if (ref) return adminDetail(ref);
   if (p.get("tab") === "priser") return adminPrices();
+  if (p.get("tab") === "ser") return adminWanted();
   const all = await API.allSubmissions();
   const f = p.get("f") || "aktive", q = (p.get("q") || "").toLowerCase();
   const count = st => all.filter(s => s.status === st).length;
@@ -2325,7 +2370,7 @@ V.admin = async (p, ref) => {
   PAGE = { f, q };
   return `<div class="wrap">
     <div class="page-h"><h1>Admin</h1><p>Gi bud, følg sendinger og betal ut.</p>${demoNote()}</div>
-    <div class="btnrow" style="margin-top:14px;flex-wrap:wrap"><a class="btn small ink" style="flex:none" href="#/admin" aria-current="page">Forespørsler</a><a class="btn small ghost" style="flex:none" href="#/admin?tab=priser">Kortpriser</a></div>
+    ${adminTabs("")}
     <div class="stats">
       ${stat("venter_bud", count("venter_bud"), "Trenger bud", true)}
       ${stat("bud_sendt", count("bud_sendt"), "Venter på kunden")}
@@ -2349,6 +2394,7 @@ V.admin.mount = (p, ref) => {
   if (!ME?.isAdmin) return;
   if (ref) return adminDetailMount();
   if (p.get("tab") === "priser") return adminPricesMount();
+  if (p.get("tab") === "ser") return adminWantedMount();
   const setP = (k, v) => { const u = new URLSearchParams(location.hash.split("?")[1] || ""); if (v) u.set(k, v); else u.delete(k); go("#/admin" + (u.toString() ? "?" + u : "")); };
   document.querySelectorAll("[data-f]").forEach(b => b.addEventListener("click", () => setP("f", b.dataset.f === "aktive" ? "" : b.dataset.f)));
   let t; document.getElementById("aq").addEventListener("input", e => { clearTimeout(t); t = setTimeout(() => { setP("q", e.target.value.trim()); }, 350); });
@@ -2495,10 +2541,82 @@ function adminDetailMount() {
   }));
   document.getElementById("inote-save").addEventListener("click", async () => { try { await API.saveNote(s.ref, document.getElementById("inote").value); toast("Notatet er lagret"); } catch (ex) { toast(ex.message); } });
 }
+const adminTabs = cur => `<div class="btnrow" style="margin-top:14px;flex-wrap:wrap">${[["", "Forespørsler"], ["ser", "Ser etter"], ["priser", "Kortpriser"]]
+  .map(([t, l]) => `<a class="btn small ${t === cur ? "ink" : "ghost"}" style="flex:none" href="#/admin${t ? "?tab=" + t : ""}" ${t === cur ? 'aria-current="page"' : ""}>${l}</a>`).join("")}</div>`;
+function adminWanted() {
+  const rows = wantedItems();
+  return `<div class="wrap">
+    <div class="page-h"><h1>Ser etter</h1><p>Det du legger til her vises for kundene på forsiden, på «Ser etter»-siden og med merket «Ser etter nå» i søket.</p>${demoNote()}</div>
+    ${adminTabs("ser")}
+    <div class="two" style="margin-top:18px">
+      <div class="panel">
+        <h3 style="margin-bottom:4px">På lista nå <span class="muted num" style="font-weight:500">(${rows.length})</span></h3>
+        <p class="muted small" style="margin-bottom:10px">Øverst vises først på forsiden. Notatet ser kunden, f.eks. «Helst komplett i eske».</p>
+        ${rows.length ? `<div class="wlist">${rows.map((i, k) => `<div class="wrow" data-wid="${i.wid}">
+          <span class="em t-${i.cat}" aria-hidden="true">${picHTML(i)}</span>
+          <div class="wmain"><b>${esc(i.name)}</b><small>${esc([i.system, i.cat].filter(Boolean).join(" · "))}</small>
+            <input class="input wnote-in" data-note="${i.wid}" value="${esc(i.note || "")}" placeholder="Notat til kunden (valgfritt)" maxlength="120" /></div>
+          <div class="wbtns"><button type="button" class="iconbtn" data-up="${i.wid}" ${k ? "" : "disabled"} aria-label="Flytt opp">↑</button><button type="button" class="iconbtn" data-down="${i.wid}" ${k < rows.length - 1 ? "" : "disabled"} aria-label="Flytt ned">↓</button><button type="button" class="iconbtn danger" data-rm="${i.wid}" aria-label="Fjern ${esc(i.name)}">✕</button></div>
+        </div>`).join("")}</div>` : `<p class="muted">Lista er tom. Legg til noe til høyre.</p>`}
+      </div>
+      <div class="stack">
+        <div class="panel">
+          <h3 style="margin-bottom:10px">Legg til</h3>
+          <div class="search-in">${icoSearch}<label class="sr" for="wq">Søk</label><input id="wq" class="input" type="search" autocomplete="off" placeholder="Søk i konsoller, kontrollere og alle spill" /></div>
+          <div id="wres" style="margin-top:10px"></div>
+        </div>
+        <form class="panel" id="wown" novalidate>
+          <h3 style="margin-bottom:10px">Noe som ikke finnes i søket</h3>
+          <label class="field"><span>Navn</span><input class="input" name="name" required maxlength="120" placeholder="F.eks. Pokémon Base Set 1. utgave" /></label>
+          <div class="row2">
+            <label class="field"><span>Kategori</span><select class="select" name="cat">${CATS.filter(c => c.name !== "Samling").map(c => `<option>${esc(c.name)}</option>`).join("")}</select></label>
+            <label class="field"><span>Konsoll/merke <small>(valgfritt)</small></span><input class="input" name="system" list="wsys" maxlength="40" /><datalist id="wsys">${allSystems().map(x => `<option value="${esc(x)}">`).join("")}</datalist></label>
+          </div>
+          <label class="field"><span>Notat til kunden <small>(valgfritt)</small></span><input class="input" name="note" maxlength="120" /></label>
+          <button class="btn" type="submit">Legg til på lista</button>
+        </form>
+      </div>
+    </div>
+  </div>`;
+}
+function adminWantedMount() {
+  const reload = async () => { try { WANTED = await API.getWanted(); } catch {} render(); };
+  const add = async r => { try { await API.addWanted(r); toast(`${r.name} er lagt til`); await reload(); } catch (ex) { toast(ex.message); } };
+  document.querySelector(".wlist")?.addEventListener("click", async e => {
+    const b = e.target.closest("[data-up],[data-down],[data-rm]"); if (!b) return;
+    const id = +(b.dataset.up || b.dataset.down || b.dataset.rm);
+    try {
+      if (b.dataset.rm) { const w = WANTED.find(x => x.id === id); if (!confirm(`Fjerne «${w?.name}» fra lista?`)) return; await API.removeWanted(id); toast("Fjernet"); return reload(); }
+      const k = WANTED.findIndex(x => x.id === id), j = b.dataset.up ? k - 1 : k + 1; if (j < 0 || j >= WANTED.length) return;
+      const order = WANTED.slice(); [order[k], order[j]] = [order[j], order[k]];
+      await Promise.all(order.map((w, n) => w.sort !== n ? API.updateWanted(w.id, { sort: n }) : null));
+      await reload();
+    } catch (ex) { toast(ex.message); }
+  });
+  document.querySelectorAll("[data-note]").forEach(inp => inp.addEventListener("change", async () => {
+    try { await API.updateWanted(+inp.dataset.note, { note: inp.value.trim() || null }); const w = WANTED.find(x => x.id === +inp.dataset.note); if (w) w.note = inp.value.trim(); toast("Notatet er lagret"); } catch (ex) { toast(ex.message); }
+  }));
+  const q = document.getElementById("wq"), box = document.getElementById("wres"); let timer, tok = 0, found = [];
+  const row = (x, k) => { const on = isHot(x); return `<div class="wpick"><span class="em t-${x.cat}" aria-hidden="true">${picHTML(x)}</span><div class="wmain"><b>${esc(x.name)}</b><small>${esc([x.system, x.cat, x.year].filter(Boolean).join(" · "))}</small></div>
+    ${on ? `<span class="muted small" style="white-space:nowrap">✓ På lista</span>` : `<button type="button" class="btn small" style="width:auto;padding:0 14px" data-add="${k}">+ Legg til</button>`}</div>`; };
+  const paint = loading => { box.innerHTML = found.length ? found.map(row).join("") + (loading ? `<p class="muted small" style="margin-top:8px">Søker i spilldatabasen…</p>` : "") : loading ? `<p class="muted small">Søker…</p>` : q.value.trim().length >= 2 ? `<p class="muted small">Ingen treff. Bruk skjemaet under.</p>` : ""; hydrate(box); };
+  q.addEventListener("input", () => {
+    clearTimeout(timer); const my = ++tok, v = q.value.trim();
+    found = v.length >= 2 ? rankSearch(search(v), v).slice(0, 6) : []; paint(v.length >= 3);
+    if (v.length >= 3) timer = setTimeout(async () => {
+      try { const pg = await Lookup.page(v, null, 0); if (my !== tok) return; found = [...found, ...pg.items.filter(x => !found.some(f => sameThing(f, x))).slice(0, 14)]; } catch {}
+      if (my === tok) paint(false);
+    }, 300);
+  });
+  box.addEventListener("click", e => { const b = e.target.closest("[data-add]"); if (!b) return; const x = found[+b.dataset.add];
+    add(x.id ? { catalog_id: x.id, name: x.name, system: x.system, cat: x.cat, image: x.image || null } : { catalog_id: null, name: x.name, system: x.system || null, cat: x.cat || "Spill", image: x.image || null }); });
+  document.getElementById("wown").addEventListener("submit", e => { e.preventDefault(); const f = e.target; const name = f.name.value.trim(); if (!name) { toast("Skriv et navn"); return; }
+    add({ catalog_id: null, name, cat: f.cat.value, system: f.system.value.trim() || null, image: null, note: f.note.value.trim() || null }); });
+}
 function adminPrices() {
   return `<div class="wrap">
     <div class="page-h"><h1>Kortpriser</h1><p>Prisene kundene ser på Cards-siden. Endringer gjelder nye sendinger.</p>${demoNote()}</div>
-    <div class="btnrow" style="margin-top:14px"><a class="btn small ghost" style="flex:none" href="#/admin">Forespørsler</a><a class="btn small ink" style="flex:none" href="#/admin?tab=priser" aria-current="page">Kortpriser</a></div>
+    ${adminTabs("priser")}
     <form id="rf" class="panel" style="margin-top:18px;max-width:720px">
       <div class="rates">${BULK.map(b => `<label><span><b>${esc(b.name)}</b><small>${b.per === 1000 ? "Kroner per kort (0,1 = 100 kr per 1000)" : `Kroner per ${esc(b.unitName)}`}</small></span><input class="input num" type="number" min="0" step="0.01" inputmode="decimal" name="${b.id}" value="${rate(b.id)}" /></label>`).join("")}</div>
       <button class="btn" style="margin-top:16px">Lagre prisene</button>
@@ -2610,6 +2728,7 @@ window.addEventListener("storage", e => { if (e.key === K.draft) { DRAFT = load(
   try { await API.init(); } catch (ex) { console.error(ex); toast("Kunne ikke koble til serveren. Prøv å laste siden på nytt."); }
   try { const s = await API.getSettings(); if (s) Object.assign(RATES, s); } catch {}
   Lookup.systems();
+  try { WANTED = await API.getWanted(); } catch (ex) { console.error(ex); WANTED = []; }
   if (LIVE && authQuery.get("code")) { try { await API.sb.auth.exchangeCodeForSession(authQuery.get("code")); } catch (ex) { console.error(ex); } }
   await refreshMe();
   if (authHash || authQuery.get("code") || authQuery.get("error")) {

@@ -391,6 +391,18 @@ insert into public.tgdb_platforms (id, system) values
  (35,'Master System'),(36,'Mega Drive'),(18,'Mega Drive'),(21,'Mega-CD'),(33,'32X'),(17,'Saturn'),(16,'Dreamcast'),(20,'Game Gear')
 on conflict (id) do update set system = excluded.system;
 
+-- ---------- «Ser etter» (styres fra Admin > Ser etter) ----------
+create table if not exists public.wanted (
+  id bigint generated always as identity primary key,
+  catalog_id text, name text not null, system text, cat text not null default 'Spill',
+  image text, note text, sort int not null default 0, created_at timestamptz not null default now()
+);
+alter table public.wanted enable row level security;
+drop policy if exists "wanted read" on public.wanted;
+create policy "wanted read" on public.wanted for select using (true);
+drop policy if exists "wanted admin write" on public.wanted;
+create policy "wanted admin write" on public.wanted for all using (public.is_admin()) with check (public.is_admin());
+
 -- =====================================================================
 -- GJØR DEG SELV TIL ADMIN
 -- 1. Registrer deg på nettsiden med din egen e-post.
