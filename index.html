@@ -703,6 +703,15 @@ main:focus { outline: none; }
   body.has-dock { padding-bottom: calc(var(--tabbar) + 64px); }
   body.has-dock .toast { bottom: calc(var(--tabbar) + 76px); }
 }
+.addr-field { position: relative; }
+.addr-sug { position: absolute; left: 0; right: 0; top: 76px; z-index: 30; background: var(--surface); border: 1.5px solid var(--cobalt); border-radius: 12px; box-shadow: 0 16px 34px -14px rgba(0,0,0,.4); overflow: hidden; }
+.addr-sug button { display: flex; justify-content: space-between; gap: 12px; width: 100%; text-align: left; background: none; border: 0; border-top: 1px solid var(--line); padding: 12px 14px; min-height: 48px; color: var(--ink); }
+.addr-sug button:first-child { border-top: 0; }
+.addr-sug button:hover, .addr-sug button.on { background: var(--surface-2); }
+.addr-sug b { font-weight: 600; font-size: 15px; }
+.addr-sug span { color: var(--muted); font-size: 14px; white-space: nowrap; }
+.zip-hint { color: var(--ok) !important; font-weight: 600; min-height: 1em; }
+.zip-hint.bad { color: var(--danger) !important; }
 [hidden] { display: none !important; }
 </style>
 </head>
@@ -1876,9 +1885,12 @@ V.sending = () => {
             <label class="field"><span>Navn</span><input class="input" name="name" autocomplete="name" value="${esc(pr.name || u?.name || "")}" ${u ? "" : "disabled"} /></label>
             <label class="field"><span>Mobilnummer</span><input class="input" name="phone" type="tel" inputmode="tel" autocomplete="tel" value="${esc(pr.phone || "")}" ${u ? "" : "disabled"} /></label>
           </div>
-          <label class="field"><span>Adresse</span><input class="input" name="addr" autocomplete="street-address" value="${esc(pr.addr || "")}" ${u ? "" : "disabled"} /><small>Brukes på fraktetiketten når du har godtatt budet.</small></label>
+          <div class="field addr-field"><label for="co-addr"><span style="font-weight:600;font-size:14.5px">Adresse</span></label>
+            <input class="input" id="co-addr" name="addr" autocomplete="address-line1" placeholder="Begynn å skrive, f.eks. Storgata 1" value="${esc(pr.addr || "")}" ${u ? "" : "disabled"} role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="addr-sug" />
+            <div class="addr-sug" id="addr-sug" role="listbox" hidden></div>
+            <small>Velg adressen fra listen, så fylles postnummer og sted ut automatisk.</small></div>
           <div class="row-zip">
-            <label class="field"><span>Postnr.</span><input class="input" name="zip" inputmode="numeric" maxlength="4" autocomplete="postal-code" value="${esc(pr.zip || "")}" ${u ? "" : "disabled"} /></label>
+            <label class="field"><span>Postnr.</span><input class="input" name="zip" inputmode="numeric" maxlength="4" autocomplete="postal-code" value="${esc(pr.zip || "")}" ${u ? "" : "disabled"} /><small class="zip-hint" id="zip-hint"></small></label>
             <label class="field"><span>Sted</span><input class="input" name="city" autocomplete="address-level2" value="${esc(pr.city || "")}" ${u ? "" : "disabled"} /></label>
           </div>
         </div>
@@ -1905,6 +1917,8 @@ V.sending = () => {
 V.sending.mount = () => {
   const f = document.getElementById("co"); if (!f) return;
   const err = document.getElementById("co-err");
+  bindAddressLookup(f);
+  f.addEventListener("input", () => { err.hidden = true; });
   f.addEventListener("click", e => {
     const rm = e.target.closest("[data-rm]"); if (!rm) return;
     const l = DRAFT.items.find(x => x.lid === rm.dataset.rm);
@@ -1957,6 +1971,57 @@ V.sending.mount = () => {
     }
   });
 };
+
+/* ---------- Adresseoppslag (Kartverket, gratis og uten nøkkel) ---------- */
+const GEO = "https://ws.geonorge.no/adresser/v1/sok";
+const placeCase = t => String(t || "").toLowerCase().replace(/(^|[\s-])(\p{L})/gu, (m, a, b) => a + b.toUpperCase()).replace(/\b(I|På|Og)\b/g, w => w.toLowerCase());
+async function geo(params) {
+  const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 6000);
+  try { const r = await fetch(GEO + "?" + new URLSearchParams(params), { signal: ctl.signal }); return r.ok ? await r.json() : null; }
+  catch { return null; } finally { clearTimeout(t); }
+}
+function bindAddressLookup(f) {
+  const inp = f.addr, box = document.getElementById("addr-sug"), hint = document.getElementById("zip-hint");
+  if (!inp || !box || inp.disabled) return;
+  let list = [], sel = -1, timer, tok = 0;
+  const close = () => { box.hidden = true; box.innerHTML = ""; list = []; sel = -1; inp.setAttribute("aria-expanded", "false"); };
+  const mark = () => box.querySelectorAll("[data-a]").forEach((b, k) => { b.classList.toggle("on", k === sel); b.setAttribute("aria-selected", k === sel); });
+  const pick = a => {
+    inp.value = a.adressetekst; f.zip.value = a.postnummer || ""; f.city.value = placeCase(a.poststed);
+    hint.textContent = ""; close(); f.dispatchEvent(new Event("input"));
+  };
+  const search = async () => {
+    const q = inp.value.trim(); const my = ++tok;
+    if (q.length < 3) return close();
+    const d = await geo({ sok: q, fuzzy: "true", treffPerSide: "6", utkoordsys: "4258" });
+    if (my !== tok || document.activeElement !== inp) return;
+    list = (d?.adresser || []).filter(a => a.adressetekst && a.postnummer);
+    if (!list.length) return close();
+    sel = -1;
+    box.innerHTML = list.map((a, k) => `<button type="button" role="option" data-a="${k}"><b>${esc(a.adressetekst)}</b><span>${esc(a.postnummer)} ${esc(placeCase(a.poststed))}</span></button>`).join("");
+    box.hidden = false; inp.setAttribute("aria-expanded", "true");
+  };
+  inp.addEventListener("input", () => { clearTimeout(timer); timer = setTimeout(search, 220); });
+  inp.addEventListener("keydown", e => {
+    if (box.hidden || !list.length) return;
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); sel = (sel + (e.key === "ArrowDown" ? 1 : -1) + list.length) % list.length; mark(); }
+    else if (e.key === "Enter" && sel >= 0) { e.preventDefault(); pick(list[sel]); }
+    else if (e.key === "Escape") close();
+  });
+  box.addEventListener("mousedown", e => e.preventDefault()); // ikke mist fokus før klikket registreres
+  box.addEventListener("click", e => { const b = e.target.closest("[data-a]"); if (b) pick(list[+b.dataset.a]); });
+  inp.addEventListener("blur", () => setTimeout(close, 150));
+  // Postnummer skrevet inn for hånd -> fyll inn sted
+  f.zip.addEventListener("input", async () => {
+    const z = f.zip.value.replace(/\D/g, ""); hint.textContent = ""; hint.classList.remove("bad");
+    if (z.length !== 4) return;
+    const d = await geo({ postnummer: z, treffPerSide: "1" });
+    if (f.zip.value.replace(/\D/g, "") !== z) return;
+    const place = d?.adresser?.[0]?.poststed;
+    if (place) { f.city.value = placeCase(place); hint.textContent = placeCase(place); }
+    else if (d) { hint.textContent = "Finner ikke dette postnummeret"; hint.classList.add("bad"); }
+  });
+}
 
 /* ---------- Account ---------- */
 V.konto = async (p) => {
