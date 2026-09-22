@@ -70,7 +70,7 @@ create table if not exists public.submissions (
   user_id uuid not null references auth.users on delete cascade,
   email text,
   name text,
-  status text not null check (status in ('venter_bud','bud_sendt','godtatt','mottatt','utbetalt','avslatt','kansellert')),
+  status text not null,
   items jsonb not null,
   ship jsonb not null default '{}'::jsonb,
   payout jsonb not null default '{}'::jsonb,
@@ -82,6 +82,11 @@ create table if not exists public.submissions (
 );
 -- Sendingskode fra Posten/PostNord som admin legger inn etter at kunden har godtatt budet
 alter table public.submissions add column if not exists ship_code text;
+-- Når varene er mottatt (et nytt bud etter dette er et «justert bud etter sjekk»)
+alter table public.submissions add column if not exists received_at timestamptz;
+alter table public.submissions drop constraint if exists submissions_status_check;
+alter table public.submissions add constraint submissions_status_check
+  check (status in ('venter_bud','bud_sendt','godtatt','mottatt','utbetalt','avslatt','kansellert','retur','returnert'));
 create index if not exists submissions_user_idx on public.submissions (user_id);
 create index if not exists submissions_status_idx on public.submissions (status);
 
@@ -156,33 +161,39 @@ begin
   return v_ref;
 end $$;
 
--- Kunden svarer på et bud: p_accepted er listen over linjer (lid) kunden selger
+-- Kunden svarer på et bud: p_accepted er listen over linjer (lid) kunden selger.
+-- Etter at varene er mottatt gjelder et justert bud bare ting med endret pris (revised=true);
+-- uendrede ting er allerede avtalt, og ting som aldri ble sendt forblir «beholdes».
 create or replace function public.respond_offer(p_ref text, p_accepted text[]) returns void
 language plpgsql security definer set search_path = public as $$
-declare
-  s submissions;
-  v_items jsonb;
-  v_total numeric;
-  v_any boolean;
+declare s submissions; v_items jsonb; v_total numeric; v_any boolean; v_after boolean; v_back boolean; v_status text; v_text text;
 begin
   select * into s from submissions where ref = p_ref and user_id = auth.uid() for update;
   if not found then raise exception 'Fant ikke forespørselen.'; end if;
   if s.status <> 'bud_sendt' then raise exception 'Budet er ikke lenger åpent.'; end if;
-
-  select jsonb_agg(it || jsonb_build_object('accepted',
-           (it->>'lid') = any(coalesce(p_accepted, '{}')) and coalesce((it->>'price')::numeric, 0) > 0))
+  v_after := s.received_at is not null;
+  select jsonb_agg(case
+      when v_after and (it->>'shipped') = 'false' then it || '{"accepted": false}'::jsonb
+      when v_after and (it->>'revised') is distinct from 'true' then it || '{"accepted": true}'::jsonb
+      else it || jsonb_build_object('accepted', (it->>'lid') = any(coalesce(p_accepted, '{}')) and coalesce((it->>'price')::numeric, 0) > 0)
+    end)
   into v_items from jsonb_array_elements(s.items) it;
-
   select coalesce(sum((it->>'price')::numeric), 0), bool_or((it->>'accepted')::boolean)
-  into v_total, v_any
-  from jsonb_array_elements(v_items) it where (it->>'accepted')::boolean;
-
-  update submissions set
-    items = v_items,
-    total = v_total,
-    status = case when coalesce(v_any, false) then 'godtatt' else 'avslatt' end,
-    messages = messages || jsonb_build_array(jsonb_build_object('by', 'system', 'photos', '[]'::jsonb, 'at', now(), 'text',
-      case when coalesce(v_any, false) then 'Kunden godtok budet på ' || round(v_total)::text || ' kr.' else 'Kunden takket nei til budet.' end)),
+  into v_total, v_any from jsonb_array_elements(v_items) it where (it->>'accepted')::boolean;
+  v_any := coalesce(v_any, false);
+  if v_after then
+    v_back := exists (select 1 from jsonb_array_elements(v_items) it where (it->>'shipped') is distinct from 'false' and not (it->>'accepted')::boolean);
+    v_status := case when v_any then 'mottatt' else 'retur' end;
+    v_text := case
+      when not v_any then 'Kunden takket nei til det justerte budet. Tingene skal sendes tilbake.'
+      when v_back then 'Kunden takket nei til de justerte prisene. De tingene skal sendes tilbake. Resten betales ut: ' || round(v_total)::text || ' kr.'
+      else 'Kunden godtok det justerte budet. Totalt ' || round(v_total)::text || ' kr.' end;
+  else
+    v_status := case when v_any then 'godtatt' else 'avslatt' end;
+    v_text := case when v_any then 'Kunden godtok budet på ' || round(v_total)::text || ' kr.' else 'Kunden takket nei til budet.' end;
+  end if;
+  update submissions set items = v_items, total = v_total, status = v_status,
+    messages = messages || jsonb_build_array(jsonb_build_object('by', 'system', 'photos', '[]'::jsonb, 'at', now(), 'text', v_text)),
     updated_at = now()
   where id = s.id;
 end $$;

@@ -712,6 +712,14 @@ main:focus { outline: none; }
 .addr-sug span { color: var(--muted); font-size: 14px; white-space: nowrap; }
 .zip-hint { color: var(--ok) !important; font-weight: 600; min-height: 1em; }
 .zip-hint.bad { color: var(--danger) !important; }
+.was { color: var(--muted); font-weight: 500; text-decoration: line-through; margin-right: 4px; }
+.agreed { margin-top: 10px; padding: 12px 14px; border-radius: 12px; background: var(--surface-2); }
+.agreed h4 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin-bottom: 6px; }
+.agreed .aline { display: flex; justify-content: space-between; gap: 10px; padding: 4px 0; font-size: 15px; }
+.retbox { border: 1.5px solid var(--danger); border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; }
+.retbox b { display: block; margin-bottom: 4px; }
+.retbox ul { margin: 0 0 6px 18px; }
+.retbox small { color: var(--muted); }
 [hidden] { display: none !important; }
 </style>
 </head>
@@ -990,8 +998,15 @@ const STATUS = {
   mottatt: { label: "Mottatt", mine: "Mottatt, sjekkes" },
   utbetalt: { label: "Utbetalt", mine: "Utbetalt" },
   avslatt: { label: "Avslått av kunden", mine: "Du takket nei" },
-  kansellert: { label: "Kansellert", mine: "Kansellert" }
+  kansellert: { label: "Kansellert", mine: "Kansellert" },
+  retur: { label: "Skal returneres", mine: "Sendes tilbake til deg" },
+  returnert: { label: "Returnert", mine: "Sendt tilbake til deg" }
 };
+// Varene er mottatt hos oss: et nytt bud er da et «justert bud etter sjekk»
+const afterCheck = s => !!s.receivedAt;
+const wasShipped = i => i.shipped !== false;
+const isRevised = i => i.revised === true;           // prisen er endret etter sjekk: kunden må ta stilling
+const lockedAfter = s => afterCheck(s) ? s.items.filter(i => wasShipped(i) && !isRevised(i)) : []; // allerede avtalt
 const byId = id => CATALOG.find(i => i.id === id);
 const bulkById = id => BULK.find(b => b.id === id);
 
@@ -1097,11 +1112,18 @@ function priceItems(items) {
     : { ...it, price: null, adminNote: "", accepted: null });
 }
 function applyResponse(s, accepted) {
-  s.items = s.items.map(i => ({ ...i, accepted: accepted.includes(i.lid) }));
+  const after = afterCheck(s);
+  s.items = s.items.map(i => ({ ...i, accepted: after && !wasShipped(i) ? false : after && !isRevised(i) ? true : accepted.includes(i.lid) && Number(i.price) > 0 }));
   const any = s.items.some(i => i.accepted);
-  s.status = any ? "godtatt" : "avslatt";
   s.total = sumTotal(s.items);
-  s.messages.push(sysMsg(any ? `Kunden godtok budet på ${kr(s.total)}.` : "Kunden takket nei til budet."));
+  if (after) {
+    s.status = any ? "mottatt" : "retur";
+    const back = any && s.items.some(i => wasShipped(i) && !i.accepted);
+    s.messages.push(sysMsg(!any ? "Kunden takket nei til det justerte budet. Tingene skal sendes tilbake." : back ? `Kunden takket nei til de justerte prisene. De tingene skal sendes tilbake. Resten betales ut: ${kr(s.total)}.` : `Kunden godtok det justerte budet. Totalt ${kr(s.total)}.`));
+  } else {
+    s.status = any ? "godtatt" : "avslatt";
+    s.messages.push(sysMsg(any ? `Kunden godtok budet på ${kr(s.total)}.` : "Kunden takket nei til budet."));
+  }
   return s;
 }
 const LocalAPI = {
@@ -1168,7 +1190,7 @@ const LocalAPI = {
 /* =============================== Backend: Supabase (live) =============================== */
 function fromRow(r) {
   return { ref: r.ref, userId: r.user_id, email: r.email, name: r.name, status: r.status, items: r.items || [], ship: r.ship || {}, payout: r.payout || {},
-    total: Number(r.total || 0), shipCode: r.ship_code || "", paidAmount: r.paid_amount == null ? null : Number(r.paid_amount), createdAt: Date.parse(r.created_at), updatedAt: Date.parse(r.updated_at),
+    total: Number(r.total || 0), shipCode: r.ship_code || "", receivedAt: r.received_at ? Date.parse(r.received_at) : null, paidAmount: r.paid_amount == null ? null : Number(r.paid_amount), createdAt: Date.parse(r.created_at), updatedAt: Date.parse(r.updated_at),
     messages: (r.messages || []).map(m => ({ ...m, at: typeof m.at === "string" ? Date.parse(m.at) : m.at })) };
 }
 function niceErr(e) {
@@ -1233,6 +1255,7 @@ const SupaAPI = {
     if ("total" in patch) row.total = patch.total;
     if ("paidAmount" in patch) row.paid_amount = patch.paidAmount;
     if ("shipCode" in patch) row.ship_code = patch.shipCode;
+    if ("receivedAt" in patch) row.received_at = patch.receivedAt ? new Date(patch.receivedAt).toISOString() : null;
     if ("messages" in patch) row.messages = patch.messages.map(m => ({ ...m, at: new Date(m.at).toISOString() }));
     const { error } = await this.sb.from("submissions").update(row).eq("ref", ref); if (error) throw new Error(error.message);
   },
@@ -2098,10 +2121,11 @@ V.konto.mount = (p) => {
 const STEPS = ["Sendt inn", "Bud klart", "Godtatt", "Mottatt", "Utbetalt"];
 const STEP_OF = { venter_bud: 0, bud_sendt: 1, godtatt: 2, mottatt: 3, utbetalt: 5 };
 function timeline(s) {
-  if (s.status === "avslatt" || s.status === "kansellert") return `<p class="muted">${STATUS[s.status].mine}.</p>`;
-  const idx = STEP_OF[s.status] ?? 0;
+  if (["avslatt", "kansellert", "retur", "returnert"].includes(s.status)) return `<p class="muted">${STATUS[s.status].mine}.</p>`;
+  const idx = s.status === "bud_sendt" && afterCheck(s) ? 3 : STEP_OF[s.status] ?? 0;
   return `<ol class="timeline">${STEPS.map((t, k) => `<li class="${k < idx ? "done" : k === idx ? "now" : ""}"><div><b>${t}</b></div></li>`).join("")}</ol>`;
 }
+const priceWas = i => i.prevPrice != null && Number(i.prevPrice) !== Number(i.price) ? `<s class="was num">${kr(Number(i.prevPrice))}</s> ` : "";
 function itemRows(s, opts = {}) {
   return s.items.map(i => `<div class="qline" style="padding:14px 0">
     ${thumbOf(i)}
@@ -2110,9 +2134,9 @@ function itemRows(s, opts = {}) {
       ${i.notes ? `<div class="sub" style="margin-top:4px;white-space:pre-wrap">${esc(i.notes)}</div>` : ""}
       ${strip(i.photos)}
       ${i.adminNote && opts.showPrice ? `<div class="admin-note"><b>Fra RaskBud</b>${esc(i.adminNote)}</div>` : ""}
-      ${opts.showPrice && i.accepted != null ? `<span class="sold ${i.accepted ? "" : "kept"}">${i.accepted ? "Solgt" : "Beholdes"}</span>` : ""}
+      ${opts.showPrice && i.accepted != null ? `<span class="sold ${i.accepted ? "" : "kept"}">${i.accepted ? "Solgt" : afterCheck(s) && wasShipped(i) ? "Sendes tilbake" : "Beholdes"}</span>` : ""}
     </div>
-    <div class="pr num">${opts.showPrice && i.price != null ? kr(Number(i.price)) : i.kind === "bulk" ? kr(Number(i.price)) : `<span class="q">Bud kommer</span>`}</div>
+    <div class="pr num">${opts.showPrice && i.price != null ? priceWas(i) + kr(Number(i.price)) : i.kind === "bulk" ? kr(Number(i.price)) : `<span class="q">Bud kommer</span>`}</div>
   </div>`).join("");
 }
 function messagesPanel(s, who) {
@@ -2153,16 +2177,23 @@ V.ordre = async (p, ref) => {
   if (!s) return `<div class="wrap page-h">${emptyBox("🔎", "Fant ikke forespørselen", "Den finnes ikke, eller hører til en annen konto.", `<a class="btn" href="#/konto">Til kontoen din</a>`)}</div>`;
   PAGE = { s };
   const pay = PAYOUTS.find(x => x.id === s.payout.method)?.name || "";
-  const heads = { venter_bud: "Vi ser på tingene dine", bud_sendt: "Budet ditt er klart", godtatt: "Pakk og send", mottatt: "Vi har fått pakken", utbetalt: "Pengene er sendt", avslatt: "Du takket nei", kansellert: "Forespørselen er kansellert" };
+  const after = afterCheck(s);
+  const heads = { venter_bud: "Vi ser på tingene dine", bud_sendt: after ? "Justert bud etter sjekk" : "Budet ditt er klart", retur: "Tingene sendes tilbake", returnert: "Sendt tilbake til deg", godtatt: "Pakk og send", mottatt: "Vi har fått pakken", utbetalt: "Pengene er sendt", avslatt: "Du takket nei", kansellert: "Forespørselen er kansellert" };
   let main = "";
   if (s.status === "bud_sendt") {
-    main = `<div class="panel offer"><h2 style="font-size:24px">Velg hva du vil selge</h2><p class="muted" style="margin:4px 0 8px">Fjern haken på ting du vil beholde. Du sender bare det du selger.</p>
-      <form id="of">${s.items.map(i => { const zero = !(Number(i.price) > 0); return `<label class="oline ${zero ? "no" : ""}">
+    const lines = after ? s.items.filter(i => wasShipped(i) && isRevised(i)) : s.items;
+    const locked = lockedAfter(s);
+    main = `<div class="panel offer"><h2 style="font-size:24px">${after ? "Vi har sjekket tingene dine" : "Velg hva du vil selge"}</h2>
+      <p class="muted" style="margin:4px 0 8px">${after
+        ? `Noe stemte ikke helt med beskrivelsen, så vi har justert prisen på ${lines.length === 1 ? "én ting" : lines.length + " ting"}. Resten er som avtalt. Du trenger ikke sende noe mer: godtar du, betaler vi ut med en gang. Vil du heller ha en ting tilbake, fjerner du haken, så sender vi den gratis.`
+        : "Fjern haken på ting du vil beholde. Du sender bare det du selger."}</p>
+      <form id="of">${lines.map(i => { const zero = !(Number(i.price) > 0); return `<label class="oline ${zero ? "no" : ""}">
         <input type="checkbox" name="acc" value="${i.lid}" ${zero ? "disabled" : "checked"} />
         <div><b>${esc(i.name)}</b><div class="sub muted small">${lineSummary(i)}</div>${i.adminNote ? `<div class="admin-note"><b>Fra RaskBud</b>${esc(i.adminNote)}</div>` : ""}</div>
-        <span class="p num">${zero ? "Kjøper ikke" : kr(Number(i.price))}</span></label>`; }).join("")}
+        <span class="p num">${zero ? (after ? "Sendes tilbake" : "Kjøper ikke") : priceWas(i) + kr(Number(i.price))}</span></label>`; }).join("")}
+        ${locked.length ? `<div class="agreed"><h4>Som avtalt</h4>${locked.map(i => `<div class="aline"><span>${esc(i.name)}${i.qty > 1 && i.kind !== "bulk" ? ` × ${i.qty}` : ""}</span><b class="num">${kr(Number(i.price))}</b></div>`).join("")}</div>` : ""}
         <div class="offer-tot"><span>Du får</span><b class="num" id="otot"></b></div>
-        <div class="btnrow"><button class="btn" type="submit" id="obtn">Godta budet</button><button class="btn ghost" type="button" id="odecl">Takk nei til alt</button></div>
+        <div class="btnrow"><button class="btn" type="submit" id="obtn">Godta budet</button><button class="btn ghost" type="button" id="odecl">${after ? (locked.length ? `Nei takk, send ${lines.length === 1 ? "den" : "dem"} tilbake` : "Nei takk, send alt tilbake") : "Takk nei til alt"}</button></div>
       </form></div>`;
   } else if (s.status === "godtatt") {
     main = `<div class="panel"><h2 style="font-size:22px;margin-bottom:6px">Slik sender du</h2>
@@ -2174,12 +2205,18 @@ V.ordre = async (p, ref) => {
       <div class="offer-tot" style="margin-bottom:0"><span>Du får</span><b class="num">${kr(s.total)}</b></div></div>`;
   } else {
     const intro = { venter_bud: "Du får et bud her, vanligvis innen 24 timer. Trenger vi flere bilder eller mer informasjon, skriver vi til deg under Meldinger.",
-      mottatt: "Vi sjekker at alt stemmer med beskrivelsen. Stemmer noe ikke, får du et nytt bud før vi betaler.",
+      mottatt: after && s.items.some(isRevised) && s.items.some(i => i.accepted != null && isRevised(i))
+        ? (s.items.some(i => isRevised(i) && i.accepted === false)
+          ? `Du takket nei til de nye prisene, så de tingene sender vi tilbake til deg, gratis. Resten betaler vi ut som avtalt: ${kr(s.total)}.`
+          : `Du har godtatt det justerte budet. Vi betaler ut ${kr(s.total)} så snart som mulig.`)
+        : "Vi sjekker at alt stemmer med beskrivelsen. Stemmer noe ikke, får du et justert bud før vi betaler.",
+      retur: "Du takket nei til det justerte budet. Vi sender tingene tilbake til deg, gratis. Du får beskjed her når de er sendt.",
+      returnert: "Tingene er sendt tilbake til deg. Du er velkommen tilbake når som helst.",
       utbetalt: `Vi har betalt ${kr(s.paidAmount ?? s.total)} til ${pay}. Takk for handelen!`,
       avslatt: "Du takket nei til budet, så du skal ikke sende noe. Du er velkommen tilbake når som helst.",
       kansellert: "Forespørselen er kansellert. Ta kontakt hvis du lurer på noe." }[s.status];
     main = `<div class="panel"><p style="margin-bottom:8px">${intro}</p>${itemRows(s, { showPrice: s.status !== "venter_bud" })}
-      ${s.status !== "venter_bud" ? `<div class="offer-tot" style="margin-bottom:0"><span>${s.status === "utbetalt" ? "Utbetalt" : "Totalt"}</span><b class="num">${kr(s.paidAmount ?? s.total)}</b></div>` : ""}</div>`;
+      ${!["venter_bud", "retur", "returnert"].includes(s.status) ? `<div class="offer-tot" style="margin-bottom:0"><span>${s.status === "utbetalt" ? "Utbetalt" : "Totalt"}</span><b class="num">${kr(s.paidAmount ?? s.total)}</b></div>` : ""}</div>`;
   }
   return `<div class="wrap">
     <div class="page-h"><a class="back" href="#/konto">‹ Kontoen din</a><h1>${heads[s.status]}</h1><p>${s.ref}, sendt inn ${fmtDate(s.createdAt)} ${pill(s.status, true)}</p></div>
@@ -2194,15 +2231,18 @@ V.ordre.mount = () => {
   const s = PAGE.s; if (!s) return;
   bindMessages(s);
   const f = document.getElementById("of"); if (!f) return;
-  const tot = () => { const acc = [...f.querySelectorAll("input[name=acc]:checked")].map(x => x.value); const t = s.items.filter(i => acc.includes(i.lid)).reduce((a, i) => a + Number(i.price), 0);
-    document.getElementById("otot").textContent = kr(t); document.getElementById("obtn").textContent = acc.length ? `Godta budet på ${kr(t)}` : "Velg minst én ting"; document.getElementById("obtn").disabled = !acc.length; return acc; };
+  const locked = lockedAfter(s);
+  const tot = () => { const acc = [...f.querySelectorAll("input[name=acc]:checked")].map(x => x.value);
+    const t = s.items.filter(i => acc.includes(i.lid)).reduce((a, i) => a + Number(i.price), 0) + locked.reduce((a, i) => a + Number(i.price), 0);
+    const ok = acc.length || locked.length, b = document.getElementById("obtn");
+    document.getElementById("otot").textContent = kr(t); b.textContent = ok ? (afterCheck(s) ? `Godta og få ${kr(t)}` : `Godta budet på ${kr(t)}`) : "Velg minst én ting"; b.disabled = !ok; return acc; };
   f.addEventListener("change", tot); tot();
   const respond = async acc => {
-    try { await API.respondOffer(s.ref, acc); await refreshMe(); toast(acc.length ? "Budet er godtatt" : "Du har takket nei"); render(); window.scrollTo(0, 0); }
+    try { await API.respondOffer(s.ref, acc); await refreshMe(); toast(afterCheck(s) ? (acc.length || locked.length ? "Takk! Vi betaler ut snart." : "Vi sender tingene tilbake til deg.") : acc.length ? "Budet er godtatt" : "Du har takket nei"); render(); window.scrollTo(0, 0); }
     catch (ex) { toast(ex.message); }
   };
   f.addEventListener("submit", e => { e.preventDefault(); respond(tot()); });
-  document.getElementById("odecl").addEventListener("click", () => { if (confirm("Takke nei til hele budet? Da skal du ikke sende noe.")) respond([]); });
+  document.getElementById("odecl").addEventListener("click", () => { if (confirm(afterCheck(s) ? (locked.length ? "Takke nei til de nye prisene? Da sender vi de tingene tilbake, og betaler ut resten som avtalt." : "Takke nei til det justerte budet? Da sender vi alle tingene tilbake til deg.") : "Takke nei til hele budet? Da skal du ikke sende noe.")) respond([]); });
 };
 
 /* ---------- Admin ---------- */
@@ -2221,10 +2261,10 @@ V.admin = async (p, ref) => {
   const count = st => all.filter(s => s.status === st).length;
   const month = new Date(); month.setDate(1); month.setHours(0, 0, 0, 0);
   const paidMonth = all.filter(s => s.status === "utbetalt" && s.updatedAt >= month.getTime()).reduce((t, s) => t + Number(s.paidAmount ?? s.total), 0);
-  const active = ["venter_bud", "bud_sendt", "godtatt", "mottatt"];
+  const active = ["venter_bud", "bud_sendt", "godtatt", "mottatt", "retur"];
   let list = f === "aktive" ? all.filter(s => active.includes(s.status)) : f === "alle" ? all : all.filter(s => s.status === f);
   if (q) list = list.filter(s => `${s.ref} ${s.name} ${s.email} ${s.items.map(i => i.name).join(" ")}`.toLowerCase().includes(q));
-  const order = { venter_bud: 0, mottatt: 1, godtatt: 2, bud_sendt: 3 };
+  const order = { venter_bud: 0, mottatt: 1, retur: 1, godtatt: 2, bud_sendt: 3 };
   list.sort((a, b) => (order[a.status] ?? 9) - (order[b.status] ?? 9) || (a.status === "venter_bud" ? a.createdAt - b.createdAt : b.updatedAt - a.updatedAt));
   const stat = (id, n, label, urgent) => `<button class="stat ${urgent && n ? "urgent" : ""}" data-f="${id}" aria-pressed="${f === id}"><b class="num">${n}</b><span>${label}</span></button>`;
   PAGE = { f, q };
@@ -2236,10 +2276,11 @@ V.admin = async (p, ref) => {
       ${stat("bud_sendt", count("bud_sendt"), "Venter på kunden")}
       ${stat("godtatt", count("godtatt"), "Skal sendes til deg")}
       ${stat("mottatt", count("mottatt"), "Mottatt, må betales", true)}
+      ${count("retur") ? stat("retur", count("retur"), "Skal returneres", true) : ""}
       <div class="stat" style="cursor:default"><b class="num">${kr(paidMonth)}</b><span>Utbetalt denne måneden</span></div>
     </div>
     <div class="filters2" style="margin-top:0">
-      <div class="chips" style="margin:0;flex:1">${[["aktive", "Aktive"], ["alle", "Alle"], ["utbetalt", "Utbetalt"], ["avslatt", "Avslått"], ["kansellert", "Kansellert"]].map(([id, l]) => `<button class="chip" data-f="${id}" aria-pressed="${f === id}">${l}</button>`).join("")}</div>
+      <div class="chips" style="margin:0;flex:1">${[["aktive", "Aktive"], ["alle", "Alle"], ["utbetalt", "Utbetalt"], ["retur", "Retur"], ["avslatt", "Avslått"], ["kansellert", "Kansellert"]].map(([id, l]) => `<button class="chip" data-f="${id}" aria-pressed="${f === id}">${l}</button>`).join("")}</div>
     </div>
     <div class="search-in" style="margin-top:10px">${icoSearch}<label class="sr" for="aq">Søk</label><input id="aq" class="input" type="search" placeholder="Søk på referanse, navn, e-post eller ting" value="${esc(q)}" /></div>
     <div class="adm-list">${list.length ? list.map(s => {
@@ -2265,25 +2306,29 @@ async function adminDetail(ref) {
   PAGE = { s };
   const pay = PAYOUTS.find(x => x.id === s.payout.method)?.name || "";
   const canPrice = ["venter_bud", "bud_sendt", "mottatt"].includes(s.status);
-  const priceBtn = { venter_bud: "Send bud til kunden", bud_sendt: "Oppdater budet", mottatt: "Send justert bud" }[s.status];
+  const after = afterCheck(s);
+  const editable = i => canPrice && (!after || wasShipped(i)); // etter mottak: bare ting som faktisk ble sendt
+  const priceBtn = after ? "Send justert bud" : { venter_bud: "Send bud til kunden", bud_sendt: "Oppdater budet" }[s.status];
+  const returns = s.items.filter(i => after && wasShipped(i) && i.accepted === false);
+  const addr = `${esc(s.ship.name || s.name)}, ${esc(s.ship.addr || "")}, ${esc(s.ship.zip || "")} ${esc(s.ship.city || "")}`;
   return `<div class="wrap">
     <div class="page-h"><a class="back" href="#/admin">‹ Alle forespørsler</a><h1>${s.ref}</h1><p>${esc(s.name)}, sendt inn ${fmtTime(s.createdAt)} ${pill(s.status)}</p></div>
     <div class="two" style="margin-top:18px">
       <div class="stack">
         <form class="panel" id="pf" novalidate>
           <h3 style="margin-bottom:4px">Ting i forespørselen</h3>
-          <p class="muted small" style="margin-bottom:10px">${canPrice ? "Sett pris per linje (hele linjen, ikke per stk). Pris 0 betyr at du ikke kjøper den." : "Budet er låst i denne statusen."}</p>
+          <p class="muted small" style="margin-bottom:10px">${!canPrice ? "Budet er låst i denne statusen." : after ? "Varene er mottatt. Endre prisen bare på tingene som ikke stemte. Kunden tar bare stilling til dem; resten er som avtalt." : "Sett pris per linje (hele linjen, ikke per stk). Pris 0 betyr at du ikke kjøper den."}</p>
           ${s.items.map(i => `<div class="aitem">
-            <div class="hd"><b>${esc(i.name)}${i.qty > 1 && i.kind !== "bulk" ? ` × ${i.qty}` : ""}</b>${i.accepted != null ? `<span class="sold ${i.accepted ? "" : "kept"}">${i.accepted ? "Kunden selger" : "Kunden beholder"}</span>` : ""}</div>
+            <div class="hd"><b>${esc(i.name)}${i.qty > 1 && i.kind !== "bulk" ? ` × ${i.qty}` : ""}</b>${after && !wasShipped(i) ? `<span class="sold kept">Ble ikke sendt</span>` : after && i.accepted === false ? `<span class="sold kept">Skal returneres</span>` : isRevised(i) && i.accepted == null ? `<span class="sold kept">Ny pris, venter på kunden</span>` : i.accepted != null ? `<span class="sold ${i.accepted ? "" : "kept"}">${i.accepted ? "Kunden selger" : "Kunden beholder"}</span>` : ""}</div>
             <div class="sub muted small">${i.kind === "bulk" ? `Pokémon-kort, fast pris ${kr(Number(i.price) / Math.max(1, i.qty))} per ${i.unitName === "kort" ? "kort" : "stk"}` : [i.cat, i.system].filter(Boolean).map(esc).join(", ")}</div>
             <div class="sub small" style="margin-top:2px">${lineSummary(i)}</div>
             ${i.image || i.upc ? `<div class="refrow">${i.image ? `<img class="refimg" src="${esc(i.image)}" alt="Bilde fra databasen" data-lb>` : ""}<div class="small muted">${i.image ? "Bildet er fra spilldatabasen, ikke kundens eget." : ""}${i.upc ? `<div>Strekkode <b class="num">${esc(i.upc)}</b>${i.upcKnown ? " (gjenkjent automatisk)" : ` <button type="button" class="linkbtn" data-link="${i.lid}">Lær koden: lagre den som «${esc(i.name)}»</button>`}</div>` : ""}</div></div>` : ""}
             ${i.notes ? `<div class="cnote">${esc(i.notes)}</div>` : ""}
             ${strip(i.photos)}
-            ${canPrice ? `<div class="ain">
-              <label class="field" style="margin:0"><span class="small">Bud (kr)</span><input class="input num" type="number" min="0" step="1" inputmode="numeric" name="pr-${i.lid}" value="${i.price ?? ""}" /></label>
+            ${editable(i) ? `<div class="ain">
+              <label class="field" style="margin:0"><span class="small">${after ? `Pris (avtalt ${kr(Number(i.prevPrice ?? i.price))})` : "Bud (kr)"}</span><input class="input num" type="number" min="0" step="1" inputmode="numeric" name="pr-${i.lid}" value="${i.price ?? ""}" /></label>
               <label class="field" style="margin:0"><span class="small">Kommentar til kunden <small>(valgfritt)</small></span><input class="input" name="an-${i.lid}" value="${esc(i.adminNote || "")}" placeholder="F.eks. riper på disken trekker ned" /></label>
-            </div>` : `<div class="sub" style="margin-top:6px"><b class="num">${i.price != null ? kr(Number(i.price)) : "Ingen pris"}</b>${i.adminNote ? `, ${esc(i.adminNote)}` : ""}</div>`}
+            </div>` : `<div class="sub" style="margin-top:6px">${priceWas(i)}<b class="num">${i.price != null ? kr(Number(i.price)) : "Ingen pris"}</b>${i.adminNote ? `, ${esc(i.adminNote)}` : ""}</div>`}
           </div>`).join("")}
           ${canPrice ? `<div class="offer-tot"><span>Totalt bud</span><b class="num" id="ptot">0 kr</b></div>
             <p class="err" id="pf-err" hidden></p><button class="btn full" type="submit">${priceBtn}</button>` : `<div class="offer-tot" style="margin-bottom:0"><span>Totalt</span><b class="num">${kr(s.total)}</b></div>`}
@@ -2294,19 +2339,25 @@ async function adminDetail(ref) {
           <h3 style="margin-bottom:12px">Neste steg</h3>
           ${{
             venter_bud: `<p class="muted small">Se på bildene, sett pris på hver ting og send budet. Trenger du flere bilder, skriv til kunden under Meldinger.</p>`,
-            bud_sendt: `<p class="muted small">Venter på at kunden godtar eller avslår. Du kan fortsatt endre budet.</p>`,
+            bud_sendt: after ? `<p class="muted small">Venter på at kunden svarer på de nye prisene. Godtar kunden, betaler du ut alt. Sier kunden nei, sender du bare de endrede tingene tilbake og betaler ut resten.</p>`
+              : `<p class="muted small">Venter på at kunden godtar eller avslår. Du kan fortsatt endre budet.</p>`,
             godtatt: `<p class="muted small" style="margin-bottom:12px">Kunden har godtatt ${kr(s.total)}. Lag en fraktlapp hos Posten eller PostNord og lim inn sendingskoden her, så ser kunden den.</p>
               <label class="field"><span class="small">Sendingskode</span><input class="input num" id="shipcode" value="${esc(s.shipCode || "")}" placeholder="F.eks. 70701234567890123" autocomplete="off" /></label>
               <button class="btn ghost full" data-act="shipcode" style="margin-bottom:10px">${s.shipCode ? "Oppdater sendingskoden" : "Lagre og vis for kunden"}</button>
               <button class="btn full" data-act="mottatt">Merk som mottatt</button>`,
-            mottatt: `<p class="muted small" style="margin-bottom:12px">Sjekk pakken. Stemmer alt, betal ut. Stemmer noe ikke, send et justert bud i skjemaet.</p>
+            mottatt: `${returns.length ? `<div class="retbox"><b>Send tilbake til kunden</b><ul>${returns.map(i => `<li>${esc(i.name)}${i.qty > 1 && i.kind !== "bulk" ? ` × ${i.qty}` : ""}</li>`).join("")}</ul><small>${addr}</small></div>` : ""}
+              <p class="muted small" style="margin-bottom:12px">${s.items.some(isRevised) ? "Kunden har svart. Betal ut beløpet under." : "Sjekk pakken. Stemmer alt, betal ut. Stemmer noe ikke, endre prisen på de tingene i skjemaet og send et justert bud."}</p>
               <label class="field"><span class="small">Beløp betalt (kr)</span><input class="input num" type="number" min="0" step="1" id="paid" value="${Math.round(s.total)}" /></label><button class="btn full" data-act="utbetalt">Merk som utbetalt</button>`,
             utbetalt: `<p class="muted small">Utbetalt ${kr(s.paidAmount ?? s.total)}. Ferdig.</p>`,
             avslatt: `<p class="muted small">Kunden takket nei. Ingenting å gjøre.</p>`,
-            kansellert: `<p class="muted small">Kansellert.</p>`
+            kansellert: `<p class="muted small">Kansellert.</p>`,
+            retur: `<div class="retbox"><b>Send tilbake til kunden</b><ul>${returns.map(i => `<li>${esc(i.name)}${i.qty > 1 && i.kind !== "bulk" ? ` × ${i.qty}` : ""}</li>`).join("")}</ul><small>${addr}</small></div>
+              <p class="muted small" style="margin-bottom:12px">Kunden takket nei til det justerte budet. Ingenting skal betales ut.</p>
+              <button class="btn full" data-act="returnert">Merk som sendt tilbake</button>`,
+            returnert: `<p class="muted small">Tingene er sendt tilbake til kunden. Ferdig.</p>`
           }[s.status]}
           ${["venter_bud", "bud_sendt", "godtatt"].includes(s.status) ? `<button class="linkbtn" data-act="kansellert" style="margin-top:12px;color:var(--danger)">Kanseller forespørselen</button>` : ""}
-          ${["avslatt", "kansellert", "utbetalt"].includes(s.status) ? `<button class="linkbtn" data-act="slett" style="margin-top:12px;color:var(--danger)">Slett forespørselen</button>` : ""}
+          ${["avslatt", "kansellert", "utbetalt", "returnert"].includes(s.status) ? `<button class="linkbtn" data-act="slett" style="margin-top:12px;color:var(--danger)">Slett forespørselen</button>` : ""}
         </div>
         <div class="panel">
           <h3 style="margin-bottom:12px">Kunde</h3>
@@ -2338,16 +2389,32 @@ function adminDetailMount() {
   bindMessages(s);
   const f = document.getElementById("pf"), tot = document.getElementById("ptot");
   if (tot) {
-    const calc = () => { tot.textContent = kr(s.items.reduce((t, i) => t + (Number(f[`pr-${i.lid}`].value) || 0), 0)); };
+    const calc = () => { tot.textContent = kr(s.items.reduce((t, i) => t + (f[`pr-${i.lid}`] ? Number(f[`pr-${i.lid}`].value) || 0 : 0), 0)); };
     f.addEventListener("input", calc); calc();
     f.addEventListener("submit", async e => {
       e.preventDefault();
       const err = document.getElementById("pf-err");
-      if (s.items.some(i => f[`pr-${i.lid}`].value === "")) { err.textContent = "Sett en pris på alle tingene. Bruk 0 for ting du ikke vil kjøpe."; err.hidden = false; return; }
-      const items = s.items.map(i => ({ ...i, price: Math.max(0, Number(f[`pr-${i.lid}`].value)), adminNote: f[`an-${i.lid}`].value.trim(), accepted: null }));
-      const total = items.reduce((t, i) => t + i.price, 0);
+      const ed = s.items.filter(i => f[`pr-${i.lid}`]);
+      if (ed.some(i => f[`pr-${i.lid}`].value === "")) { err.textContent = "Sett en pris på alle tingene. Bruk 0 for ting du ikke vil kjøpe."; err.hidden = false; return; }
+      let items, msg;
+      if (afterCheck(s)) {
+        // Justert bud etter sjekk: bare ting med endret pris må kunden svare på
+        items = s.items.map(i => {
+          if (!f[`pr-${i.lid}`]) return i;
+          const agreed = Number(i.prevPrice ?? i.price), now = Math.max(0, Number(f[`pr-${i.lid}`].value));
+          const changed = now !== agreed;
+          return { ...i, price: now, adminNote: f[`an-${i.lid}`].value.trim(), prevPrice: changed ? agreed : null, revised: changed, accepted: changed ? null : true };
+        });
+        const n = items.filter(isRevised).length;
+        if (!n) { err.textContent = "Du har ikke endret noen priser. Stemmer alt, betal ut i stedet."; err.hidden = false; return; }
+        msg = `Justert bud etter sjekk: ny pris på ${n === 1 ? "én ting" : n + " ting"}.`;
+      } else {
+        items = s.items.map(i => ({ ...i, price: Math.max(0, Number(f[`pr-${i.lid}`].value)), adminNote: f[`an-${i.lid}`].value.trim(), accepted: null }));
+      }
+      const total = items.filter(i => !afterCheck(s) || wasShipped(i)).reduce((t, i) => t + Number(i.price), 0);
+      if (!msg) msg = `${s.status === "venter_bud" ? "Bud sendt" : "Nytt bud sendt"}: ${kr(total)}.`;
       try {
-        await API.adminUpdate(s.ref, { items, total, status: "bud_sendt", messages: [...s.messages, sysMsg(`${s.status === "venter_bud" ? "Bud sendt" : "Nytt bud sendt"}: ${kr(total)}.`)] });
+        await API.adminUpdate(s.ref, { items, total, status: "bud_sendt", messages: [...s.messages, sysMsg(msg)] });
         toast("Budet er sendt til kunden"); render();
       } catch (ex) { toast(ex.message); }
     });
@@ -2364,7 +2431,8 @@ function adminDetailMount() {
       }
       if (act === "kansellert" && !confirm("Kansellere forespørselen? Kunden ser at den er kansellert.")) return;
       const patch = { status: act };
-      const msg = { mottatt: "Pakken er mottatt og sjekkes.", utbetalt: "", kansellert: "Forespørselen er kansellert." }[act];
+      if (act === "mottatt") { patch.receivedAt = Date.now(); patch.items = s.items.map(i => ({ ...i, shipped: i.accepted !== false })); }
+      const msg = { mottatt: "Pakken er mottatt og sjekkes.", utbetalt: "", kansellert: "Forespørselen er kansellert.", returnert: "Tingene er sendt tilbake til kunden." }[act];
       if (act === "utbetalt") { const amt = Number(document.getElementById("paid").value); if (!(amt >= 0)) { toast("Skriv inn beløpet."); return; } patch.paidAmount = amt; patch.messages = [...s.messages, sysMsg(`Utbetalt ${kr(amt)}.`)]; }
       else patch.messages = [...s.messages, sysMsg(msg)];
       await API.adminUpdate(s.ref, patch); toast("Oppdatert"); render();
