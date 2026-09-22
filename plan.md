@@ -23,12 +23,14 @@ Det som gjenstår er reelt nok arbeid til to dager, men det er oppsett, nøkler,
 
 Disse blokkerer alt annet, så de går først.
 
-- [ ] **Gjør deg selv til admin.** Registrer en konto på nettsiden med e-posten du faktisk skal bruke. Si ifra om e-posten, så kjører jeg SQL-en som setter `is_admin = true` på den kontoen.
-- [ ] **Returadresse.** Adressen som skal stå på fraktetiketten kundene skriver referansenummeret på. Uten denne går alt til en plassholderadresse.
+- [x] **Admin-e-post mottatt:** `altkjop@gmail.com`. Kontoen fantes ikke ennå, så jeg har satt opp databasen til å gjøre den til admin automatisk i det øyeblikket du registrerer deg på siden med denne e-posten — du trenger ikke si ifra på nytt, bare registrer deg.
+- [x] **Returadresse satt:** Kjøpalt, Atomveien 20K, 1777 Halden. Dette er adressen som skal stå på pakken kunden sender *til deg* etter at de har godtatt et bud. Verifisert på fraktetiketten i en full test.
 - [ ] **TheGamesDB-nøkkel.** Registrer deg på forums.thegamesdb.net og be om en API-nøkkel. Skriv at det er for en liten norsk innkjøpsbutikk, og spør om kommersiell bruk er greit.
 - [ ] **RAWG-nøkkel (reserve/supplement).** Gratis konto på rawg.io/apidocs, tar under to minutter. Gratis for bedrifter opptil 20 000 søk/måned så lenge siden lenker til RAWG (det gjør den allerede i bunnteksten).
 - [ ] Så snart én av de to nøklene finnes: jeg legger dem inn i Supabase → Edge Functions → Secrets (`TGDB_KEY`, `RAWG_KEY`). Ingen kodeendring trengs, bare nøkkelen.
 - [ ] **Navn — utsatt.** "Spillpant" var feil retning (dere kjøper, det er ikke pant). "Loftet" og "Skrinet" er begge sjekket opptatt/vurdert utilstrekkelig. Vi lander navnet senere; nettsiden kjører videre under det tekniske navnet "Kjøpalt" (fra GitHub-repoet) inntil videre, og merkevaren byttes når navnet er bestemt.
+
+**Slik fungerer det, bekreftet riktig forstått:** Kunden sender inn ting → du gir et bud → kunden godtar → siden gir kunden et referansenummer og din adresse på etiketten → kunden sender pakken selv → du sjekker varene når de kommer → du betaler ut. Ingen kobling til Posten API trengs ennå — riktig prioritert til senere.
 
 ## 2. Dag 1: sikkerhetsgjennomgang med agent (utover det som allerede er kjørt)
 
@@ -41,14 +43,14 @@ Testen jeg allerede har kjørt dekker databasereglene (hvem kan lese/skrive hva)
 - [ ] **Prøv å lure systemet på den live siden**, ikke bare i simulering: logg inn som to ekte testbrukere i to faner og gjenta forfalskningsforsøkene fra den tidligere testen, denne gangen mot den offentlige URL-en og med ekte nettverkstrafikk, ikke direkte mot databasen. Venter på punkt 4.
 - [ ] **Sjekk at e-postbekreftelse faktisk fungerer** fra domenet siden ligger på (GitHub Pages eller Vercel), ikke bare at Supabase sender e-posten.
 
-## 3. Dag 1–2: Vercel
+## 3. Vercel — koblet til og bekreftet live
 
-**Blokkert akkurat nå.** Jeg har tilgang til kontoen din (`altkjop@gmail.com`, brukernavn `b3cpot`), men selve teamet ditt (`b3cpots-projects`) avviser meg med en 403-feil: *"You must re-authenticate to this scope."* Dette er en Vercel-side tilgangsbegrensning, ikke noe jeg kan fikse selv.
+**Løst.** Vercel-tilkoblingen fungerte etter at du koblet den til på nytt fra claude.ai-siden (ikke bare fra Vercels eget grensesnitt — det var forskjellen).
 
-- [ ] **Du må gjøre dette:** gå dit du koblet Vercel til Claude og koble til på nytt, og pass på at du gir tilgang til teamet **b3cpots-projects** spesifikt når du godkjenner tilkoblingen. Si ifra når det er gjort, så prøver jeg igjen.
-- [ ] Koble Vercel til samme GitHub-repo (`b3cpot/kjopalt`), så den bygger automatisk fra `main`.
-- [ ] Sammenlign med GitHub Pages-versjonen — de bør vise akkurat det samme siden det er én statisk fil.
-- [ ] Bestem hvilken av de to som er den "ekte" adressen kundene skal bruke.
+- [x] Prosjektet `kjopalt` er koblet til `b3cpot/kjopalt` på GitHub og bygger automatisk fra `main`.
+- [x] Produksjons-URL: **`kjopalt.vercel.app`**. Bekreftet: status 200, riktig innhold, riktig Supabase-tilkobling (ikke demo-modus).
+- [x] Bekreftet at den bygger på nytt for hver push — nyeste commit (sikkerhetsoppdateringene fra i dag) var allerede i produksjon.
+- [ ] Bestem hvilken av GitHub Pages (`b3cpot.github.io/kjopalt`) og Vercel (`kjopalt.vercel.app`) som er den "ekte" adressen kundene skal bruke — de er identiske nå, så velg ut fra smak. Vercel er enklere å koble et eget domene til senere.
 - [ ] Om dere vil ha et eget domene pekende på Vercel: sett det opp når domenet er kjøpt (navn ikke landet ennå — se punkt 6).
 
 ## 4. Nettverkstilgang jeg trenger fra deg
