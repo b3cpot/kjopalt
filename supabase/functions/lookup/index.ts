@@ -140,10 +140,22 @@ async function byBarcode(code: string) {
   return item;
 }
 
+// Enkel rate-limit: maks 30 kall per IP per minutt, så ingen kan bruke opp de
+// gratis kvotene hos UPCitemdb/TheGamesDB ved å spamme funksjonen.
+async function withinRateLimit(req: Request): Promise<boolean> {
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  const { data, error } = await db.rpc("check_rate_limit", { p_key: ip, p_limit: 30, p_window_seconds: 60 });
+  if (error) { console.error("rate limit check failed", error); return true; } // ikke blokker på egen feil
+  return data === true;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   const url = new URL(req.url);
   try {
+    if (!(await withinRateLimit(req))) {
+      return json({ error: "For mange forespørsler. Vent litt og prøv igjen." }, 429);
+    }
     const upc = (url.searchParams.get("upc") ?? "").replace(/\D/g, "");
     if (upc) {
       if (!/^(\d{8}|\d{12,14})$/.test(upc)) return json({ error: "Ugyldig strekkode" }, 400);
