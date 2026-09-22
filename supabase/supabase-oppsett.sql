@@ -33,6 +33,7 @@ end $$;
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created after insert on auth.users
   for each row execute function public.handle_new_user();
+revoke execute on function public.handle_new_user() from public, anon, authenticated;
 
 alter table public.profiles enable row level security;
 drop policy if exists "profiles read" on public.profiles;
@@ -214,6 +215,8 @@ grant execute on function public.add_message(text, text, jsonb) to authenticated
 -- ---------- Bilder ----------
 insert into storage.buckets (id, name, public) values ('photos', 'photos', true)
 on conflict (id) do nothing;
+update storage.buckets set file_size_limit = 8388608, allowed_mime_types = array['image/jpeg','image/png','image/webp']
+where id = 'photos';
 drop policy if exists "photos upload own folder" on storage.objects;
 create policy "photos upload own folder" on storage.objects for insert to authenticated
   with check (bucket_id = 'photos' and (storage.foldername(name))[1] = auth.uid()::text);
@@ -244,6 +247,36 @@ create table if not exists public.lookup_cache (
   created_at timestamptz not null default now()
 );
 alter table public.lookup_cache enable row level security;
+
+-- ---------- Rate-limit for lookup-funksjonen ----------
+-- Maks N kall per nøkkel (IP) per tidsvindu, håndhevet i databasen slik at
+-- det ikke kan omgås ved å kalle funksjonen på andre måter.
+create table if not exists public.rate_limit (
+  bucket_key text not null,
+  window_start timestamptz not null,
+  count int not null default 1,
+  primary key (bucket_key, window_start)
+);
+alter table public.rate_limit enable row level security;
+-- Ingen policies: bare service_role (funksjonen) skal røre denne.
+
+create or replace function public.check_rate_limit(p_key text, p_limit int, p_window_seconds int)
+returns boolean
+language plpgsql security definer set search_path = public as $$
+declare
+  v_window timestamptz := date_trunc('minute', now()) - (extract(epoch from now() - date_trunc('minute', now()))::int / p_window_seconds * p_window_seconds) * interval '1 second';
+  v_count int;
+begin
+  insert into public.rate_limit (bucket_key, window_start, count)
+  values (p_key, v_window, 1)
+  on conflict (bucket_key, window_start) do update set count = rate_limit.count + 1
+  returning count into v_count;
+  if random() < 0.02 then
+    delete from public.rate_limit where window_start < now() - interval '1 hour';
+  end if;
+  return v_count <= p_limit;
+end $$;
+revoke all on function public.check_rate_limit(text, int, int) from public, anon, authenticated;
 
 -- =====================================================================
 -- GJØR DEG SELV TIL ADMIN
